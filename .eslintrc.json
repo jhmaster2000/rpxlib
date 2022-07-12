@@ -6,7 +6,7 @@
     "parserOptions": {
         "warnOnUnsupportedTypeScriptVersion": false,
         "tsconfigRootDir": "./",
-        "project": ["./tsconfig.json", "./tests/tsconfig.json"],
+        "project": ["./tsconfig.json"],
         "sourceType": "module",
         "ecmaVersion": 2022,
         "ecmaFeatures": { "impliedStrict": true }
@@ -63,11 +63,14 @@
         "array-callback-return": ["error", { "allowImplicit": true }],
         "indent": ["error", 4, { "SwitchCase": 1 }],
         "semi": ["error", "always"],
+        "@typescript-eslint/no-namespace": "off",
         "@typescript-eslint/unbound-method": "off",
         "@typescript-eslint/no-non-null-assertion": "off",
+        "@typescript-eslint/adjacent-overload-signatures": "off",
         "@typescript-eslint/no-inferrable-types": ["warn", { "ignoreParameters": true, "ignoreProperties": true }],
         "@typescript-eslint/no-unused-vars": ["warn", { "vars": "all", "args": "none", "ignoreRestSiblings": false }],
         "@typescript-eslint/no-misused-promises": ["error", { "checksVoidReturn": false }],
+        "@typescript-eslint/no-empty-function": ["error", { "allow": ["overrideMethods"] }],
         "@typescript-eslint/restrict-template-expressions": ["error", {
             "allowNumber": true,
             "allowBoolean": true,
