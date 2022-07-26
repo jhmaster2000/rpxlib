@@ -1,12 +1,20 @@
-import { crc32 } from 'hash-wasm';
-import zlib from 'zlib';
+import crc32 from './crc32';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { int, uint32 } from './primitives';
-import { Relocation } from './relocation.js';
+import { Relocation } from './relocation';
 import { RPL } from './rpl';
 import { Structs } from './structs';
 import { ELFSymbol } from './symbol';
+
+function inflateSync(buf: Uint8Array): Uint8Array {
+    //@ts-expect-error
+    return Bun.gunzipSync(buf);
+}
+function deflateSync(buf: Uint8Array, opts?: { windowBits?: number, level?: number, memLevel?: number, strategy?: number }): Uint8Array {
+    //@ts-expect-error
+    return Bun.gzipSync(buf, opts);
+}
 
 function isSectionWithData(sectiondata: Structs.ISection): sectiondata is Structs.ISectionWithData {
     return +sectiondata.type !== SectionType.NoBits && +sectiondata.type !== SectionType.Null;
@@ -46,8 +54,8 @@ export class Section extends Structs.Section {
         this.entSize = file.passUint32();
         if (this.type !== SectionType.NoBits && this.type !== SectionType.Null && +this.storedOffset !== 0) {
             this.#data = file.subarray(<number>this.storedOffset, <number>this.storedOffset + <number>this.storedSize);
+            this.#tryDecompress();
         }
-        this.#tryDecompress();
     }
 
     override readonly type;
@@ -59,16 +67,16 @@ export class Section extends Structs.Section {
     #tryDecompress(): boolean {
         if (!this.#data || !(<number>this.flags & SectionFlags.Compressed)) return false;
         if (+this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return false;
-        const decompressed = zlib.inflateSync(this.#data.subarray(4));
+        const decompressed = inflateSync(this.#data.subarray(4));
         (<number>this.flags) &= ~SectionFlags.Compressed;
-        this.#data = decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength);
+        this.#data = Buffer.from(decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength));
         return true;
     }
-    compress() { this.#tryCompress(); }
+    /* //! <temp> prevent TS no unused method */ compress() { this.#tryCompress(); }
     #tryCompress(compressionLevel?: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): Buffer | false {
         if (!this.hasData || +this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return false;
 
-        const compressed = Buffer.concat([Buffer.alloc(4), zlib.deflateSync(this.data!, { level: compressionLevel })]);
+        const compressed = Buffer.concat([Buffer.alloc(4), deflateSync(this.data!, { level: compressionLevel })]);
         compressed.writeUint32BE(+this.size, 0);
         if (compressed.byteLength > this.size) return false;
 
@@ -113,11 +121,9 @@ export class Section extends Structs.Section {
         return +this.link ? this.rpx.sections[+this.link] ?? null : null;
     }
 
-    get crc32Hash(): Promise<uint32> {
-        return (async () => {
-            if (!this.hasData) return new uint32(0x00000000);
-            return new uint32('0x' + await crc32(this.data!));
-        })();
+    get crc32Hash(): uint32 {
+        if (!this.hasData) return new uint32(0x00000000);
+        return new uint32(crc32(this.data!));
     }
     
     get data(): Buffer | null {
@@ -231,27 +237,23 @@ export class RPLCrcSection extends Section {
     }
 
     override get data() {
-        return (async () => {
-            return new ReadonlyDataWrapper(new Uint32Array(await this.crcs as number[]).buffer).swap32();
-        })() as unknown as  ReadonlyDataWrapper;
+        return new ReadonlyDataWrapper(new Uint32Array(this.crcs as number[]).buffer).swap32();
     }
 
     override get size(): uint32 {
         return new uint32(this.rpx.sections.length * <number>this.entSize);
     }
 
-    override get crc32Hash(): Promise<uint32> {
-        return Promise.resolve(new uint32(0));
+    override get crc32Hash(): uint32 {
+        return new uint32(0);
     }
 
     get crcs() {
-        return (async () => {
-            const hashes: Promise<uint32>[] = [];
-            for (let i = 0; i < this.rpx.sections.length; i++) {
-                hashes.push(this.rpx.sections[i]!.crc32Hash);
-            }
-            return Promise.all(hashes);
-        })();
+        const hashes: uint32[] = [];
+        for (let i = 0; i < this.rpx.sections.length; i++) {
+            hashes.push(this.rpx.sections[i].crc32Hash);
+        }
+        return hashes;
     }
 }
 
