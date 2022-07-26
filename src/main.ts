@@ -1,5 +1,5 @@
 import path from 'path';
-//import { debug } from './debug';
+import { debug } from './debug'; debug;
 import { RPL } from './rpl';
 
 function WSLSafePath(patharg: string): string {
@@ -9,12 +9,10 @@ function WSLSafePath(patharg: string): string {
 }
 
 const RPX_PATH: string = WSLSafePath('Q:/.EmulatorGames/WiiU/Tools/SuperHacks/rpxs/red-pro2.vanilla.rpx');
-console.log(RPX_PATH);
 console.time('open rpx');
-const rpx = new RPL(RPX_PATH);
+const RPX_DATA: ArrayBuffer = await Bun.file(RPX_PATH).arrayBuffer();
+const rpx = new RPL(RPX_DATA);
 console.timeEnd('open rpx');
 rpx;
 
-//console.log(rpx.sections[1]);
-
-//await debug(rpx);
+await debug(rpx);
