@@ -1,4 +1,3 @@
-import fs from 'fs';
 import { DataWrapper } from './datawrapper';
 import { SectionType } from './enums';
 import { Header } from './header';
@@ -6,8 +5,8 @@ import { uint16 } from './primitives.js';
 import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
 
 export class RPL extends Header {
-    constructor(filepath: string) {
-        const file = new DataWrapper(fs.readFileSync(filepath));
+    constructor(data: ArrayBuffer) {
+        const file = new DataWrapper(data);
         super(file);
 
         this.#sections = new Array(<number>this._sectionHeadersEntryCount) as Section[];
