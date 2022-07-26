@@ -159,7 +159,7 @@ export async function debug(rpx: RPL): Promise<void> {
                 break;
             }
             case SectionType.Rela: {
-                //break;
+                break;
                 const section = rpx.sections[i] as RelocationSection;
                 console.log(`    Section #${i} - Relocations with addends:`);
                 console.log('        Addr.       Addend      Info        Type  Sym.Index');
@@ -175,7 +175,7 @@ export async function debug(rpx: RPL): Promise<void> {
             case SectionType.RPLCrcs: {
                 const section = rpx.sections[i] as RPLCrcSection;
                 console.log(`    Section #${i} - RPL CRCs:`);
-                const crcs = await section.crcs;
+                const crcs = section.crcs;
                 await Bun.write(Bun.stdout, '        ');
                 for (let i = 0; i < crcs.length; i++) {
                     await Bun.write(Bun.stdout, crcs[i]!.toString(16).toUpperCase().padStart(8, '0') + '    ');
