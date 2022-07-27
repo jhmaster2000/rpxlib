@@ -17,8 +17,6 @@ export class DataWrapper extends Buffer {
         return new DataWrapper(buf.slice(start, start + length));
     }
 
-    // TODO: Override static methods
-    
     pos: number = 0;
 
     passUint8 = function(this: DataWrapper) {
@@ -52,87 +50,91 @@ export class DataWrapper extends Buffer {
         return new sint32(v);
     };
 
-    dropUint8 = function(this: DataWrapper) {
-        this.writeUint8(this.pos);
+    dropUint8 = function(this: DataWrapper, value: uint8) {
+        this.writeUint8(+value, this.pos);
         this.pos += 1;
     };
-    dropUint16 = function(this: DataWrapper) {
-        this.writeUint16BE(this.pos);
+    dropUint16 = function(this: DataWrapper, value: uint16) {
+        this.writeUint16BE(+value, this.pos);
         this.pos += 2;
     };
-    dropUint32 = function(this: DataWrapper) {
-        this.writeUint32BE(this.pos);
+    dropUint32 = function(this: DataWrapper, value: uint32) {
+        this.writeUint32BE(+value, this.pos);
         this.pos += 4;
     };
-    dropInt8 = function(this: DataWrapper) {
-        this.writeInt8(this.pos);
+    dropInt8 = function(this: DataWrapper, value: sint8) {
+        this.writeInt8(+value, this.pos);
         this.pos += 1;
     };
-    dropInt16 = function(this: DataWrapper) {
-        this.writeInt16BE(this.pos);
+    dropInt16 = function(this: DataWrapper, value: sint16) {
+        this.writeInt16BE(+value, this.pos);
         this.pos += 2;
     };
-    dropInt32 = function(this: DataWrapper) {
-        this.writeInt32BE(this.pos);
+    dropInt32 = function(this: DataWrapper, value: sint32) {
+        this.writeInt32BE(+value, this.pos);
         this.pos += 4;
     };
 }
 
 export class ReadonlyDataWrapper extends DataWrapper {
     readonly [k: number]: number;
-    override swap16(): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap16(); }
-    override swap32(): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap32(); }
-    override swap64(): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap64(); }
-    override write(): 0 { return 0; }
-    override writeFloatBE(): 0 { return 0; }
-    override writeFloatLE(): 0 { return 0; }
-    override writeDoubleBE(): 0 { return 0; }
-    override writeDoubleLE(): 0 { return 0; }
-    override writeBigInt64BE(): 0 { return 0; }
-    override writeBigInt64LE(): 0 { return 0; }
-    override writeBigUInt64BE(): 0 { return 0; }
-    override writeBigUInt64LE(): 0 { return 0; }
-    override writeBigUint64BE(): 0 { return 0; }
-    override writeBigUint64LE(): 0 { return 0; }
-    override writeInt32BE(): 0 { return 0; }
-    override writeInt32LE(): 0 { return 0; }
-    override writeUInt32BE(): 0 { return 0; }
-    override writeUInt32LE(): 0 { return 0; }
-    override writeUint32BE(): 0 { return 0; }
-    override writeUint32LE(): 0 { return 0; }
-    override writeUInt16BE(): 0 { return 0; }
-    override writeUInt16LE(): 0 { return 0; }
-    override writeUint16BE(): 0 { return 0; }
-    override writeUint16LE(): 0 { return 0; }
-    override writeInt16BE(): 0 { return 0; }
-    override writeInt16LE(): 0 { return 0; }
-    override writeIntBE(): 0 { return 0; }
-    override writeIntLE(): 0 { return 0; }
-    override writeUIntBE(): 0 { return 0; }
-    override writeUIntLE(): 0 { return 0; }
-    override writeUintBE(): 0 { return 0; }
-    override writeUintLE(): 0 { return 0; }
-    override writeUInt8(): 0 { return 0; }
-    override writeUint8(): 0 { return 0; }
-    override writeInt8(): 0 { return 0; }
-    override set(): void {}
+    override get buffer(): ArrayBuffer { throw new Error('Cannot access writable ArrayBuffer of ReadonlyDataWrapper instance.'); };
+    override swap16 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap16(); }
+    override swap32 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap32(); }
+    override swap64 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap64(); }
+    override write = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeFloatBE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeFloatLE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeDoubleBE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeDoubleLE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeBigInt64BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeBigInt64LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeBigUInt64BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeBigUInt64LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeBigUint64BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeBigUint64LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeInt32BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeInt32LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUInt32BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUInt32LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUint32BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUint32LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUInt16BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUInt16LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUint16BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUint16LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeInt16BE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeInt16LE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeIntBE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeIntLE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUIntBE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUIntLE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUintBE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUintLE = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUInt8 = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeUint8 = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override writeInt8 = function(this: ReadonlyDataWrapper): 0 { return 0; }
+    override set = function(this: ReadonlyDataWrapper): void {}
     override slice(start?: number, end?: number): ReadonlyDataWrapper {
         return new ReadonlyDataWrapper(Uint8Array.prototype.slice.call(this, start, end).buffer);
     }
     override subarray(start?: number, end?: number): ReadonlyDataWrapper {
-        return this.subarray(start, end);
+        return new ReadonlyDataWrapper(Uint8Array.prototype.slice.call(this, start, end).buffer);
     }
     override copy(target: Uint8Array, targetStart?: number, sourceStart?: number, sourceEnd?: number): number {
         if (target === this) return 0;
         return super.copy(target, targetStart, sourceStart, sourceEnd);
     }
-    override copyWithin(): this { return this; }
-    override fill(): this { return this; }
-    override sort(): this { return this; }
-    override dropUint8  = () => void 0;
-    override dropUint16 = () => void 0;
-    override dropUint32 = () => void 0;
-    override dropInt8   = () => void 0;
-    override dropInt16  = () => void 0;
-    override dropInt32  = () => void 0;
+    //@ts-expect-error
+    override copyWithin = function(this: ReadonlyDataWrapper) { return this; }
+    //@ts-expect-error
+    override fill = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return this; }
+    //@ts-expect-error
+    override sort = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return this; }
+    override dropUint8  = () => {};
+    override dropUint16 = () => {};
+    override dropUint32 = () => {};
+    override dropInt8   = () => {};
+    override dropInt16  = () => {};
+    override dropInt32  = () => {};
 }
