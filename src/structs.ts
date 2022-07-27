@@ -1,5 +1,6 @@
 import { uint8, uint16, uint32, sint32 } from './primitives';
 import * as Enums from './enums';
+import { StringStore } from './stringstore.js';
 
 export namespace Structs {
     export class Header {
@@ -40,15 +41,7 @@ export namespace Structs {
         public    entSize: uint32 = new uint32;       //! uint32
     }
 
-    type ISectionBase = { [K in keyof Section]: Section[K] };
-    export interface ISectionWithoutData extends ISectionBase {
-        type: Enums.SectionType.NoBits | Enums.SectionType.Null;
-    }
-    export interface ISectionWithData extends ISectionBase {
-        type: Exclude<Enums.SectionType, Enums.SectionType.NoBits | Enums.SectionType.Null>;
-        data: Buffer;
-    }
-    export type ISection = ISectionWithoutData | ISectionWithData; 
+    export type RawSectionValues = { [K in keyof Section]: Section[K] };
 
     export class Symbol {
         /** Offset from the start of the {@link Section.link linked string table section} of 
@@ -119,6 +112,6 @@ export namespace Structs {
         public   tlsAlignShift: uint16 = new uint16;       //? uint16
         public   runtimeFileInfoSize: uint32 = new uint32; //* uint32
         /** Array of null-terminated strings until the end of the section */
-        public   strings: { [addr: number]: string; } = {};
+        public   strings?: StringStore;
     }
 }
