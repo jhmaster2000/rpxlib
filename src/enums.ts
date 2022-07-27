@@ -55,6 +55,8 @@ export enum SectionType {
     Note          = 0x00000007,
     /** Section data occupies no space in the file but otherwise resembles SHT_PROGBITS (SHT_NOBITS) */
     NoBits        = 0x00000008,
+    /** Section data contains relocation entries without explicit addends (SHT_REL) */
+    Rel           = 0x00000009,
     /** RPL exports table (SHT_RPL_EXPORTS) */
     RPLExports    = 0x80000001,
     /** RPL imports table (SHT_RPL_IMPORTS) */
