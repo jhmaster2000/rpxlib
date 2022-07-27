@@ -15,6 +15,26 @@ export class StringStore {
             offset = i + 1;
         }
     }
+    /** The total size in bytes to write all the StringStore's strings to a buffer. */
+    get size() {
+        const strings = this;
+        let sz = 0;
+        for (const key in strings) {
+            if (isNaN(<number><unknown>key)) continue;
+            sz += strings[key].length;
+        }
+        return sz;
+    }
+    /** All of the StringStore's strings as a buffer. */
+    get buffer(): Buffer {
+        const strings = this;
+        const buffer = Buffer.allocUnsafe(this.size);
+        for (const key in strings) {
+            if (isNaN(<number><unknown>key)) continue;
+            buffer.write(strings[key]);
+        }
+        return buffer;
+    }
     get(offset: number | int): string {
         const strings = this;
         offset = +offset;
