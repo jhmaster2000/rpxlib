@@ -1,5 +1,5 @@
-import { uint8 } from './primitives.js';
-import { Structs } from './structs.js';
+import { uint8 } from './primitives';
+import { Structs } from './structs';
 
 export interface RelocationInfo {
     symbolIndex: number; // info >> 8 //* (uint24) */

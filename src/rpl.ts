@@ -1,7 +1,7 @@
 import { DataWrapper } from './datawrapper';
 import { SectionType } from './enums';
 import { Header } from './header';
-import { uint16 } from './primitives.js';
+import { uint16 } from './primitives';
 import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
 
 export class RPL extends Header {

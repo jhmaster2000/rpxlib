@@ -1,6 +1,6 @@
 import { uint8, uint16, uint32, sint32 } from './primitives';
 import * as Enums from './enums';
-import { StringStore } from './stringstore.js';
+import { StringStore } from './stringstore';
 
 export namespace Structs {
     export class Header {
