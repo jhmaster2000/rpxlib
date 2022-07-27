@@ -1,7 +1,7 @@
 import { ABI, Class, Endian, ISA, SectionFlags, SectionType, SymbolBinding, SymbolType, SymbolVisibility, Type, Version } from './enums';
 import { int, sint16, sint32, sint8, uint32 } from './primitives';
 import { RPL } from './rpl';
-import { RelocationSection, RPLCrcSection, StringSection, SymbolSection } from './sections';
+import { RelocationSection, RPLCrcSection, RPLFileInfoSection, StringSection, SymbolSection } from './sections';
 
 async function log<T>(label: string, value: T, formatter: (v: T) => string = String, parenFormatter?: (v: T) => string, endline = true) {
     await Bun.write(Bun.stdout,
@@ -53,6 +53,7 @@ const stringifySectionType = (v: SectionType) => {
         0x00000004: 'Reloc. w/ addends',
         0x00000007: 'Note',
         0x00000008: 'No Bits',
+        0x00000009: 'Relocations',
         0x80000001: 'RPL Exports',
         0x80000002: 'RPL Imports',
         0x80000003: 'RPL CRCs',
@@ -133,7 +134,7 @@ export async function debug(rpx: RPL): Promise<void> {
     for (let i = 0; i < rpx.sections.length; i++) {
         switch (+rpx.sections[i]!.type) {
             case SectionType.StrTab: {
-                break;
+                //break;
                 const section = rpx.sections[i] as StringSection;
                 console.log(`    Section #${i} - String Table:`);
                 for (const [addr, str] of Object.entries(section.strings)) {
@@ -142,7 +143,7 @@ export async function debug(rpx: RPL): Promise<void> {
                 break;
             }
             case SectionType.SymTab: {
-                break;
+                //break;
                 const section = rpx.sections[i] as SymbolSection;
                 console.log(`    Section #${i} - Symbol Table:`);
                 console.log('        Value       Size        Type                    Binding  Visibility  Info Othr  Shndx  Name');
@@ -173,6 +174,7 @@ export async function debug(rpx: RPL): Promise<void> {
                 break;
             }
             case SectionType.RPLCrcs: {
+                //break;
                 const section = rpx.sections[i] as RPLCrcSection;
                 console.log(`    Section #${i} - RPL CRCs:`);
                 const crcs = section.crcs;
@@ -185,8 +187,36 @@ export async function debug(rpx: RPL): Promise<void> {
                 break;
             }
             case SectionType.RPLFileInfo: {
-                //const section = rpx.sections[i] as RPLFileInfoSection;
+                //break;
+                const section = rpx.sections[i] as RPLFileInfoSection;
                 console.log(`    Section #${i} - RPL File Info:`);
+                console.log('        Magic:', hex16(section.fileinfo.magic));
+                console.log('        Version:', hex16(section.fileinfo.version));
+                console.log('        textSize:', hex32(section.fileinfo.textSize));
+                console.log('        textAlign:', hex32(section.fileinfo.textAlign));
+                console.log('        dataSize:', hex32(section.fileinfo.dataSize));
+                console.log('        dataAlign:', hex32(section.fileinfo.dataAlign));
+                console.log('        loadSize:', hex32(section.fileinfo.loadSize));
+                console.log('        loadAlign:', hex32(section.fileinfo.loadAlign));
+                console.log('        tempSize:', hex32(section.fileinfo.tempSize));
+                console.log('        trampAdjust:', hex32(section.fileinfo.trampAdjust));
+                console.log('        sdaBase:', hex32(section.fileinfo.sdaBase));
+                console.log('        sda2Base:', hex32(section.fileinfo.sda2Base));
+                console.log('        stackSize:', hex32(section.fileinfo.stackSize));
+                console.log('        stringsOffset:', hex32(section.fileinfo.stringsOffset));
+                console.log('        flags:', hex32(section.fileinfo.flags));
+                console.log('        heapSize:', hex32(section.fileinfo.heapSize));
+                console.log('        tagOffset:', hex32(section.fileinfo.tagOffset));
+                console.log('        minVersion:', hex32(section.fileinfo.minVersion));
+                console.log('        compressionLevel:', hexSInt(32, section.fileinfo.compressionLevel));
+                console.log('        trampAddition:', hex32(section.fileinfo.trampAddition));
+                console.log('        fileInfoPad:', hex32(section.fileinfo.fileInfoPad));
+                console.log('        cafeSdkVersion:', hex32(section.fileinfo.cafeSdkVersion));
+                console.log('        cafeSdkRevision:', hex32(section.fileinfo.cafeSdkRevision));
+                console.log('        tlsModuleIndex:', hex16(section.fileinfo.tlsModuleIndex));
+                console.log('        tlsAlignShift:', hex16(section.fileinfo.tlsAlignShift));
+                console.log('        runtimeFileInfoSize:', hex32(section.fileinfo.runtimeFileInfoSize));
+                console.log('        Strings:', section.fileinfo.strings);
                 break;
             }
             default: continue;

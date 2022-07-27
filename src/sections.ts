@@ -1,9 +1,10 @@
 import crc32 from './crc32';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
-import { int, uint32 } from './primitives';
+import { uint32 } from './primitives';
 import { Relocation } from './relocation';
 import { RPL } from './rpl';
+import { StringStore } from './stringstore';
 import { Structs } from './structs';
 import { ELFSymbol } from './symbol';
 
@@ -16,12 +17,8 @@ function deflateSync(buf: Uint8Array, opts?: { windowBits?: number, level?: numb
     return Bun.gzipSync(buf, opts);
 }
 
-function isSectionWithData(sectiondata: Structs.ISection): sectiondata is Structs.ISectionWithData {
-    return +sectiondata.type !== SectionType.NoBits && +sectiondata.type !== SectionType.Null;
-}
-
 export class Section extends Structs.Section {
-    constructor(inputdata: DataWrapper | Structs.ISection, rpx: RPL) {
+    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { data?: Buffer | null }, rpx: RPL) {
         super();
         this.rpx = rpx;
         if (!(inputdata instanceof DataWrapper)) {
@@ -35,8 +32,17 @@ export class Section extends Structs.Section {
             this.entSize = inputdata.entSize;
             this.storedOffset = new uint32(0);
             this.storedSize = new uint32(0);
-            if (isSectionWithData(inputdata)) {
-                this.storedOffset = new uint32(1);
+            const sectionType = +inputdata.type;
+            if (sectionType !== SectionType.NoBits && sectionType !== SectionType.Null) {
+                this.storedOffset = new uint32(0xFFFFFFFF); // Special value for internal use
+                this.storedSize = new uint32(0xFFFFFFFF); // Special value for internal use
+                if (!inputdata.data) {
+                    if (
+                        sectionType === SectionType.StrTab || sectionType === SectionType.SymTab ||
+                        sectionType === SectionType.Rela || sectionType === SectionType.RPLFileInfo
+                    ) return this;
+                    else throw new TypeError('Sections not of type Null or NoBits must have data.');
+                }
                 this.#data = inputdata.data;
             }
             return this;
@@ -53,8 +59,15 @@ export class Section extends Structs.Section {
         this.addrAlign = file.passUint32();
         this.entSize = file.passUint32();
         if (this.type !== SectionType.NoBits && this.type !== SectionType.Null && +this.storedOffset !== 0) {
-            this.#data = file.subarray(<number>this.storedOffset, <number>this.storedOffset + <number>this.storedSize);
-            this.#tryDecompress();
+            if (<number>this.flags & SectionFlags.Compressed) {
+                // Decompress section data
+                const decompressed = inflateSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
+                //(<number>this.flags) &= ~SectionFlags.Compressed;
+                this.#data = Buffer.from(decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength));
+            } else {
+                // Section is not compressed
+                this.#data = file.subarray(<number>this.storedOffset, <number>this.storedOffset + <number>this.storedSize);
+            }
         }
     }
 
@@ -62,26 +75,24 @@ export class Section extends Structs.Section {
     override readonly storedOffset;
     override readonly storedSize;
 
-    init(...args: unknown[]): unknown { return; } //! virtual
-
-    #tryDecompress(): boolean {
-        if (!this.#data || !(<number>this.flags & SectionFlags.Compressed)) return false;
-        if (+this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return false;
-        const decompressed = inflateSync(this.#data.subarray(4));
-        (<number>this.flags) &= ~SectionFlags.Compressed;
-        this.#data = Buffer.from(decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength));
-        return true;
-    }
-    /* //! <temp> prevent TS no unused method */ compress() { this.#tryCompress(); }
-    #tryCompress(compressionLevel?: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): Buffer | false {
+    /** Safely attempts to provide the section data compressed.
+     * 
+     * **Does NOT mutate the Section instance in any way:**
+     * - The Section instance `data` property will **NOT** be modified and remain the uncompressed data.
+     * - It is enforced that `Section.data` is always **NOT** compressed for functionality and simplicity.
+     * - This function will **NOT** enable the `Compressed` flag in the Section instance `Section.flags`
+     * property, instead the flag will be handled by the parent RPL/RPX (`Section.rpx`) class during save.
+     * 
+     * @returns `Buffer` containing the compressed data if successful.
+     * @returns `false` if the section is not compressable or if the compression would make it larger than uncompressed.
+     */
+    tryCompress(compressionLevel?: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): Buffer | false {
         if (!this.hasData || +this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return false;
 
-        const compressed = Buffer.concat([Buffer.alloc(4), deflateSync(this.data!, { level: compressionLevel })]);
+        const compressed = Buffer.concat([Buffer.allocUnsafe(4), deflateSync(this.data!, { level: compressionLevel })]);
         compressed.writeUint32BE(+this.size, 0);
         if (compressed.byteLength > this.size) return false;
-
-        (<number>this.flags) |= SectionFlags.Compressed;
-        this.#data = null;
+        //(<number>this.flags) |= SectionFlags.Compressed;
         return compressed.subarray(compressed.byteOffset, compressed.byteOffset + compressed.byteLength);
     }
 
@@ -97,7 +108,7 @@ export class Section extends Structs.Section {
         if (!(shstrtab instanceof StringSection)) throw new Error('Invalid ELF file. Section header string table index is not a string table.');
 
         if (+this.nameOffset === 0) return +this.type ? `SECTION${thisIndex}` : '<null>';
-        else return shstrtab.getString(this.nameOffset);
+        else return shstrtab.strings.get(this.nameOffset);
     }
 
     get offset(): uint32 {
@@ -122,8 +133,7 @@ export class Section extends Structs.Section {
     }
 
     get crc32Hash(): uint32 {
-        if (!this.hasData) return new uint32(0x00000000);
-        return new uint32(crc32(this.data!));
+        return new uint32(this.hasData ? crc32(this.data!) : 0x00000000);
     }
     
     get data(): Buffer | null {
@@ -131,9 +141,8 @@ export class Section extends Structs.Section {
     }
 
     set data(value: Buffer | null) {
-        if (+this.type === SectionType.NoBits || +this.type === SectionType.Null) throw new TypeError('Cannot set data of NoBits or Null section.');
-        if (+this.storedOffset === 0) throw new TypeError('Cannot set data of section with offset set to 0.');
-        if (value === null) throw new TypeError('Cannot manually set data of section to null.');
+        if (!this.hasData) throw new TypeError('Cannot set data of NoBits or Null section.');
+        if (value === null || value.byteLength === 0) throw new TypeError('Cannot set data of section to empty data or null.');
         this.#data = value;
     }
 
@@ -147,52 +156,35 @@ export class Section extends Structs.Section {
 }
 
 export class StringSection extends Section {
-    constructor(file: DataWrapper, rpx: RPL) {
-        super(file, rpx);
-        if (!this.hasData) throw new Error('String section cannot be empty.');
-        this.init();
-    }
-    override init() {
-        const decoder = new TextDecoder();
-
-        for (let i = 0, offset = 0; i < this.size; i++) {
-            if (super.data![i] !== 0) continue;
-            const strLen = i - offset;
-            if (strLen > 0) this.strings[offset] = decoder.decode(super.data!.subarray(offset, offset + strLen));
-            offset = i + 1;
+    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { strings?: Record<number, string> }, rpx: RPL) {
+        super(inputdata, rpx);
+        if (!(inputdata instanceof DataWrapper)) {
+            this.strings = new StringStore();
+            return this; // TODO
         }
+        if (!super.hasData) throw new Error('String section cannot be empty.');
+        this.strings = new StringStore(super.data!);
     }
 
-    getString(offset: number | int): string {
-        offset = +offset;
-        if (!Object.keys(this.strings).length) return '<compressed>';
-        let str = this.strings[(<number>offset)];
-        if (!str) {
-            for (const key in this.strings) {
-                const kv = Number(key);
-                if (kv < offset) {
-                    const ss = this.strings[kv]!;
-                    if (kv + ss.length > offset) {
-                        str = ss.slice(<number>offset - kv); break;
-                    }
-                }
-            }
-        }
-        return (str || '<empty>') ?? '<error>';
+    override get data(): ReadonlyDataWrapper {
+        return new ReadonlyDataWrapper(this.strings.buffer);
+    }
+    override get hasData(): true {
+        return true;
     }
 
-    strings: Record<number, string> = {};
+    strings: StringStore;
 }
 
 export class SymbolSection extends Section {
-    constructor(file: DataWrapper, rpx: RPL) {
-        super(file, rpx);
-        if (!this.hasData) throw new Error('Symbol section cannot be empty.');
-        this.init();
-    }
-    override init() {
+    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { symbols?: ELFSymbol[] }, rpx: RPL) {
+        super(inputdata, rpx);
+        if (!(inputdata instanceof DataWrapper)) {
+            return this; // TODO
+        }
+        if (!super.hasData) throw new Error('Symbol section cannot be empty.');
         const data = new DataWrapper(super.data!);
-        const num = (<number>this.size) / (<number>this.entSize);
+        const num = super.data!.byteLength / (<number>this.entSize);
     
         for (let i = 0; i < num; i++) {
             const symbol = new ELFSymbol(this);
@@ -206,17 +198,34 @@ export class SymbolSection extends Section {
         }
     }
 
+    override get data(): ReadonlyDataWrapper {
+        const buffer = new DataWrapper(new ArrayBuffer(16 * this.symbols.length));
+        for (const sym of this.symbols) {
+            buffer.dropUint32(sym.nameOffset);
+            buffer.dropUint32(sym.value);
+            buffer.dropUint32(sym.size);
+            buffer.dropUint8(sym.info);
+            buffer.dropUint8(sym.other);
+            buffer.dropUint16(sym.shndx);
+        }
+        return new ReadonlyDataWrapper(buffer);
+    }
+    override get hasData(): true {
+        return true;
+    }
+
     symbols: ELFSymbol[] = [];
 }
 
 export class RelocationSection extends Section {
-    constructor(file: DataWrapper, rpx: RPL) {
-        super(file, rpx);
-        this.init();
-    }
-    override init() {
+    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { relocations?: Relocation[] }, rpx: RPL) {
+        super(inputdata, rpx);
+        if (!(inputdata instanceof DataWrapper)) {
+            return this; // TODO
+        }
+        if (!super.hasData) throw new Error('Relocation section cannot be empty.');
         const data = new DataWrapper(super.data!);
-        const num = (<number>this.size) / (<number>this.entSize);
+        const num = super.data!.byteLength / (<number>this.entSize);
 
         for (let i = 0; i < num; i++) {
             const relocation = new Relocation();
@@ -228,16 +237,33 @@ export class RelocationSection extends Section {
         }
     }
 
+    override get data(): ReadonlyDataWrapper {
+        const buffer = new DataWrapper(new ArrayBuffer((+this.type === SectionType.Rela ? 12 : 8) * this.relocations.length));
+        for (const reloc of this.relocations) {
+            buffer.dropUint32(reloc.addr);
+            buffer.dropUint32(reloc.info);
+            if (+this.type === SectionType.Rela) buffer.dropInt32(reloc.addend!);
+        }
+        return new ReadonlyDataWrapper(buffer);
+    }
+    override get hasData(): true {
+        return true;
+    }
+
     relocations: Relocation[] = [];
 }
 
 export class RPLCrcSection extends Section {
-    constructor(file: DataWrapper, rpx: RPL) {
-        super(file, rpx);
+    constructor(inputdata: DataWrapper, rpx: RPL) {
+        super(inputdata, rpx);
+        if (!super.hasData) throw new Error('RPL CRC section cannot be empty.');
     }
 
-    override get data() {
+    override get data(): ReadonlyDataWrapper {
         return new ReadonlyDataWrapper(new Uint32Array(this.crcs as number[]).buffer).swap32();
+    }
+    override get hasData(): true {
+        return true;
     }
 
     override get size(): uint32 {
@@ -258,10 +284,89 @@ export class RPLCrcSection extends Section {
 }
 
 export class RPLFileInfoSection extends Section {
-    constructor(file: DataWrapper, rpx: RPL) {
-        super(file, rpx);
-        this.init();
+    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { fileinfo?: Structs.RPLFileInfo }, rpx: RPL) {
+        super(inputdata, rpx);
+        if (!(inputdata instanceof DataWrapper)) {
+            return this; // TODO
+        }
+        if (!super.hasData) throw new Error('RPL File Info section cannot be empty.');
+        if (super.data!.byteLength < 0x60) throw new Error('RPL File Info section is too small, must be at least 0x60 in size.');
+
+        const data = new DataWrapper(super.data!);
+
+        const magic = data.passUint16();
+        if (+magic !== 0xCAFE) throw new Error(`RPL File Info section magic number is invalid. Expected 0xCAFE, got 0x${magic.toString(16).toUpperCase()}`);
+
+        this.fileinfo.version             = data.passUint16();
+        this.fileinfo.textSize            = data.passUint32();
+        this.fileinfo.textAlign           = data.passUint32();
+        this.fileinfo.dataSize            = data.passUint32();
+        this.fileinfo.dataAlign           = data.passUint32();
+        this.fileinfo.loadSize            = data.passUint32();
+        this.fileinfo.loadAlign           = data.passUint32();
+        this.fileinfo.tempSize            = data.passUint32();
+        this.fileinfo.trampAdjust         = data.passUint32();
+        this.fileinfo.sdaBase             = data.passUint32();
+        this.fileinfo.sda2Base            = data.passUint32();
+        this.fileinfo.stackSize           = data.passUint32();
+        this.fileinfo.stringsOffset       = data.passUint32();
+        this.fileinfo.flags               = data.passUint32();
+        this.fileinfo.heapSize            = data.passUint32();
+        this.fileinfo.tagOffset           = data.passUint32();
+        this.fileinfo.minVersion          = data.passUint32();
+        this.fileinfo.compressionLevel    = data.passInt32();
+        this.fileinfo.trampAddition       = data.passUint32();
+        this.fileinfo.fileInfoPad         = data.passUint32();
+        this.fileinfo.cafeSdkVersion      = data.passUint32();
+        this.fileinfo.cafeSdkRevision     = data.passUint32();
+        this.fileinfo.tlsModuleIndex      = data.passUint16();
+        this.fileinfo.tlsAlignShift       = data.passUint16();
+        this.fileinfo.runtimeFileInfoSize = data.passUint32();
+
+        // Section does not have strings
+        // NOTE: Silently ignoring string offset out of bounds
+        if (super.data!.byteLength === 0x60 || super.data!.byteLength <= this.fileinfo.stringsOffset) {
+            this.fileinfo.strings = new StringStore();
+            return this;
+        }
+
+        const stringData = super.data!.subarray(+this.fileinfo.stringsOffset);
+        this.fileinfo.strings = new StringStore(stringData, +this.fileinfo.stringsOffset);
     }
 
+    override get data(): ReadonlyDataWrapper {
+        const buffer = new DataWrapper(new ArrayBuffer(0x60));
+        buffer.dropUint16(this.fileinfo.magic);
+        buffer.dropUint16(this.fileinfo.version);
+        buffer.dropUint32(this.fileinfo.textSize);
+        buffer.dropUint32(this.fileinfo.textAlign);
+        buffer.dropUint32(this.fileinfo.dataSize);
+        buffer.dropUint32(this.fileinfo.dataAlign);
+        buffer.dropUint32(this.fileinfo.loadSize);
+        buffer.dropUint32(this.fileinfo.loadAlign);
+        buffer.dropUint32(this.fileinfo.tempSize);
+        buffer.dropUint32(this.fileinfo.trampAdjust);
+        buffer.dropUint32(this.fileinfo.sdaBase);
+        buffer.dropUint32(this.fileinfo.sda2Base);
+        buffer.dropUint32(this.fileinfo.stackSize);
+        buffer.dropUint32(this.fileinfo.stringsOffset);
+        buffer.dropUint32(this.fileinfo.flags);
+        buffer.dropUint32(this.fileinfo.heapSize);
+        buffer.dropUint32(this.fileinfo.tagOffset);
+        buffer.dropUint32(this.fileinfo.minVersion);
+        buffer.dropInt32(this.fileinfo.compressionLevel);
+        buffer.dropUint32(this.fileinfo.trampAddition);
+        buffer.dropUint32(this.fileinfo.fileInfoPad);
+        buffer.dropUint32(this.fileinfo.cafeSdkVersion);
+        buffer.dropUint32(this.fileinfo.cafeSdkRevision);
+        buffer.dropUint16(this.fileinfo.tlsModuleIndex);
+        buffer.dropUint16(this.fileinfo.tlsAlignShift);
+        buffer.dropUint32(this.fileinfo.runtimeFileInfoSize);
+        return new ReadonlyDataWrapper(Buffer.concat([buffer, this.fileinfo.strings.buffer]));
+    }
+    override get hasData(): true {
+        return true;
+    }
 
+    fileinfo = new Structs.RPLFileInfo as Structs.RPLFileInfo & { strings: StringStore };
 }
