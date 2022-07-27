@@ -10,7 +10,7 @@ export class ELFSymbol extends Structs.Symbol {
 
     get name(): string {
         const strSection = this.#section.linkedSection as StringSection;
-        return strSection.getString(this.nameOffset) || '';
+        return strSection.strings.get(this.nameOffset) || '';
     }
 
     get type(): SymbolType { return <number>this.info & 0xF; }
