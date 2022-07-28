@@ -9,12 +9,14 @@ import { Structs } from './structs';
 import { ELFSymbol } from './symbol';
 
 function inflateSync(buf: Uint8Array): Uint8Array {
-    //@ts-expect-error
-    return Bun.gunzipSync(buf);
+    //@ts-expect-error missing from bun-types
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return Bun.gunzipSync(buf) as Uint8Array;
 }
 function deflateSync(buf: Uint8Array, opts?: { windowBits?: number, level?: number, memLevel?: number, strategy?: number }): Uint8Array {
-    //@ts-expect-error
-    return Bun.gzipSync(buf, opts);
+    //@ts-expect-error missing from bun-types
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return Bun.gzipSync(buf, opts) as Uint8Array;
 }
 
 export class Section extends Structs.Section {
