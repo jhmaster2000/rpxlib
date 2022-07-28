@@ -19,35 +19,32 @@ export class StringStore {
     }
     /** The total size in bytes to write all the StringStore's strings to a buffer. */
     get size() {
-        const strings = this;
         let sz = 0;
-        for (const key in strings) {
+        for (const key in this) {
             if (isNaN(<number><unknown>key)) continue;
-            sz += strings[key].length + 1;
+            sz += this[key].length + 1;
         }
         return sz;
     }
     /** All of the StringStore's strings as a buffer. */
     get buffer(): Buffer {
-        const strings = this;
         const buffer = Buffer.allocUnsafe(this.size);
         const encoder = new TextEncoder('utf-8');
-        for (const key in strings) {
+        for (const key in this) {
             const keyn = Number(key);
             if (keyn !== keyn) continue;
-            buffer.set(encoder.encode(strings[key]), keyn - this.#dataOffset);
+            buffer.set(encoder.encode(this[key]), keyn - this.#dataOffset);
         }
         return buffer;
     }
     get(offset: number | int): string {
-        const strings = this;
         offset = +offset;
-        let str = strings[(<number>offset)];
+        let str = this[(<number>offset)];
         if (!str) {
-            for (const key in strings) {
+            for (const key in this) {
                 const keyn = Number(key);
                 if (keyn < offset) {
-                    const keynStr = strings[keyn];
+                    const keynStr = this[keyn];
                     if (keyn + keynStr.length > offset) {
                         str = keynStr.slice(<number>offset - keyn); break;
                     }
