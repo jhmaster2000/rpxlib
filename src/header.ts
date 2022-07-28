@@ -42,5 +42,9 @@ export class Header extends Structs.Header {
     override readonly programHeadersEntryCount;
     override readonly sectionHeadersEntrySize;
     override readonly sectionHeadersOffset;
-    override readonly _sectionHeadersEntryCount;
+    /**
+     * @internal Do not access outside of the Header class or the RPL class constructor.
+     * This property is deleted outside of the Header class/RPL constructor as it's invalidated by RPL class in favor of `RPL.sections.length`.
+     */
+    protected override readonly _sectionHeadersEntryCount;
 }
