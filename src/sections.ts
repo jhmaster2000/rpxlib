@@ -74,8 +74,8 @@ export class Section extends Structs.Section {
     }
 
     override readonly type;
-    override readonly storedOffset;
-    override readonly storedSize;
+    protected override readonly storedOffset;
+    protected override readonly storedSize;
 
     /** Safely attempts to provide the section data compressed.
      * 
