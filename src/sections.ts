@@ -172,6 +172,10 @@ export class StringSection extends Section {
         return true;
     }
 
+    override get size(): uint32 {
+        return new uint32(this.strings.size);
+    }
+
     strings: StringStore;
 }
 
@@ -198,7 +202,7 @@ export class SymbolSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(new ArrayBuffer(16 * this.symbols.length));
+        const buffer = new DataWrapper(new ArrayBuffer(<number>this.entSize * this.symbols.length));
         for (const sym of this.symbols) {
             buffer.dropUint32(sym.nameOffset);
             buffer.dropUint32(sym.value);
@@ -211,6 +215,10 @@ export class SymbolSection extends Section {
     }
     override get hasData(): true {
         return true;
+    }
+
+    override get size(): uint32 {
+        return new uint32(<number>this.entSize * this.symbols.length);
     }
 
     symbols: ELFSymbol[] = [];
@@ -237,7 +245,7 @@ export class RelocationSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(new ArrayBuffer((+this.type === SectionType.Rela ? 12 : 8) * this.relocations.length));
+        const buffer = new DataWrapper(new ArrayBuffer(<number>this.entSize * this.relocations.length));
         for (const reloc of this.relocations) {
             buffer.dropUint32(reloc.addr);
             buffer.dropUint32(reloc.info);
@@ -247,6 +255,10 @@ export class RelocationSection extends Section {
     }
     override get hasData(): true {
         return true;
+    }
+
+    override get size(): uint32 {
+        return new uint32(<number>this.entSize * this.relocations.length);
     }
 
     relocations: Relocation[] = [];
@@ -365,6 +377,10 @@ export class RPLFileInfoSection extends Section {
     }
     override get hasData(): true {
         return true;
+    }
+
+    override get size(): uint32 {
+        return new uint32(0x60 + this.fileinfo.strings.size);
     }
 
     fileinfo = new Structs.RPLFileInfo as Structs.RPLFileInfo & { strings: StringStore };
