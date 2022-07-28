@@ -3,8 +3,10 @@ import { int } from './primitives';
 type WritableStringStore = StringStore & { [offset: number]: string };
 
 export class StringStore {
+    readonly #dataOffset: number = 0;
     constructor(data?: Buffer, dataOffset: number = 0) {
         if (!data) return this;
+        this.#dataOffset = dataOffset;
         const strings = this as WritableStringStore;
         const decoder = new TextDecoder();
         for (let i = 0, offset = 0; i < data.byteLength; i++) {
@@ -21,7 +23,7 @@ export class StringStore {
         let sz = 0;
         for (const key in strings) {
             if (isNaN(<number><unknown>key)) continue;
-            sz += strings[key].length;
+            sz += strings[key].length + 1;
         }
         return sz;
     }
@@ -29,9 +31,11 @@ export class StringStore {
     get buffer(): Buffer {
         const strings = this;
         const buffer = Buffer.allocUnsafe(this.size);
+        const encoder = new TextEncoder('utf-8');
         for (const key in strings) {
-            if (isNaN(<number><unknown>key)) continue;
-            buffer.write(strings[key]);
+            const keyn = Number(key);
+            if (keyn !== keyn) continue;
+            buffer.set(encoder.encode(strings[key]), keyn - this.#dataOffset);
         }
         return buffer;
     }
@@ -62,7 +66,7 @@ export class StringStore {
     }
     add(str: string): number {
         const strings = this as WritableStringStore;
-        const lastOffset = Object.keys(strings).map(Number).filter(x => !Number.isNaN(x)).sort((a, b) => b - a)[0];
+        const lastOffset = Object.keys(strings).map(Number).filter(x => x === x).sort((a, b) => b - a)[0];
         const nextOffset = lastOffset + strings[lastOffset].length + 1;
         strings[nextOffset] = str;
         return nextOffset;
