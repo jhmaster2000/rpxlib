@@ -8,11 +8,19 @@ function WSLSafePath(patharg: string): string {
     return path.posix.join('/mnt/', dir[0].toLowerCase(), dir.slice(3), name);
 }
 
+console.time('total');
+
 const RPX_PATH: string = WSLSafePath('Q:/.EmulatorGames/WiiU/Tools/SuperHacks/rpxs/red-pro2.vanilla.rpx');
-console.time('open rpx');
+console.time('open file');
 const RPX_DATA: ArrayBuffer = await Bun.file(RPX_PATH).arrayBuffer();
+console.timeEnd('open file');
+console.time('parse file');
 const rpx = new RPL(RPX_DATA);
-console.timeEnd('open rpx');
+console.timeEnd('parse file');
 rpx;
 
-await debug(rpx);
+console.time('debug file');
+await debug(rpx, { rplcrcs: true });
+console.timeEnd('debug file');
+
+console.timeEnd('total');
