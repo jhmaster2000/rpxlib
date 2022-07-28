@@ -17,7 +17,6 @@ console.timeEnd('open file');
 console.time('parse file');
 const rpx = new RPL(RPX_DATA);
 console.timeEnd('parse file');
-rpx;
 
 console.time('debug file');
 await debug(rpx, { rplcrcs: true });
