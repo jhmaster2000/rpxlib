@@ -103,11 +103,10 @@ export class Section extends Structs.Section {
     get name(): string {
         const thisIndex = this.index;
         if (+this.rpx.shstrIndex === 0) return `SECTION${thisIndex}`;
+        if (+this.nameOffset === 0) return +this.type ? `SECTION${thisIndex}` : '<null>';
 
         const shstrtab = this.rpx.sections[+this.rpx.shstrIndex];
         if (!(shstrtab instanceof StringSection)) throw new Error('Invalid ELF file. Section header string table index is not a string table.');
-
-        if (+this.nameOffset === 0) return +this.type ? `SECTION${thisIndex}` : '<null>';
         else return shstrtab.strings.get(this.nameOffset);
     }
 
