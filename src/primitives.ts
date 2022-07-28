@@ -60,4 +60,10 @@ export class sint32 extends Number {
     }
 }
 
+//type uint8 = number;
+//type uint16 = number;
+//type uint32 = number;
+//type sint8 = number;
+//type sint16 = number;
+//type sint32 = number;
 export type int = uint8 | uint16 | uint32 | sint8 | sint16 | sint32;
