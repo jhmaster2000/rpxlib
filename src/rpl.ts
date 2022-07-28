@@ -15,21 +15,26 @@ export class RPL extends Header {
         for (let i = 0; i < this._sectionHeadersEntryCount; i++) {
             const sectionType: SectionType = file.readUint32BE(file.pos + 4);
             switch (sectionType) {
-                case SectionType.StrTab:
-                    this.#sections[i] = new StringSection(file, this); break;
-                case SectionType.SymTab:
-                    this.#sections[i] = new SymbolSection(file, this); break;
-                case SectionType.Rela:
-                    this.#sections[i] = new RelocationSection(file, this); break;
-                case SectionType.RPLCrcs:
-                    this.#sections[i] = new RPLCrcSection(file, this); break;
-                case SectionType.RPLFileInfo:
-                    this.#sections[i] = new RPLFileInfoSection(file, this); break;
+                case SectionType.StrTab:      this.#sections[i] = new StringSection(file, this); break;
+                case SectionType.SymTab:      this.#sections[i] = new SymbolSection(file, this); break;
+                case SectionType.Rel:         //! fallthrough
+                case SectionType.Rela:        this.#sections[i] = new RelocationSection(file, this); break;
+                case SectionType.RPLCrcs:     this.#sections[i] = new RPLCrcSection(file, this); break;
+                case SectionType.RPLFileInfo: this.#sections[i] = new RPLFileInfoSection(file, this); break;
                 default:
                     this.#sections[i] = new Section(file, this);
             }
         }
         //! [[DISCARD this._sectionHeadersEntryCount]]
+        Reflect.deleteProperty(this, '_sectionHeadersEntryCount');
+    }
+
+    save() {
+        
+        for (let i = 0; i < this.sections.length; i++) {
+            //
+        }
+        return;
     }
 
     #sections: Section[];
