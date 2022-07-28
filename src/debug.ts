@@ -89,7 +89,21 @@ const stringifySymbolVisibility = (v: SymbolVisibility) => {
     return SymbolVisibility[v] ?? 'Unknown';
 };
 
-export async function debug(rpx: RPL): Promise<void> {
+interface SpecialSectionsOptions {
+    strings?: boolean;
+    symbols?: boolean;
+    relocations?: boolean;
+    rplcrcs?: boolean;
+    rplfileinfo?: boolean;
+}
+
+export async function debug(rpx: RPL, specialSections: boolean | SpecialSectionsOptions = false, logPerfs = false): Promise<void> {
+    let logperf: (msg: string, startPerf: number) => void;
+    if (logPerfs) logperf = (msg: string, startPerf: number) => console.log(msg, performance.now() - startPerf, 'ms');
+    else logperf = () => { return; };
+
+    const debugPerf = performance.now();
+    let perf = performance.now();
     console.log('[ELF Header]');
     await log('Magic                    ', rpx.magic);
     await log('Class                    ', rpx.class, stringifyClass, hex8);
@@ -110,116 +124,157 @@ export async function debug(rpx: RPL): Promise<void> {
     await log('Sect. H. Entry Size      ', rpx.sectionHeadersEntrySize, hex16);
     await log('Sect. H. Entry Count     ', rpx.sectionHeadersEntryCount, hex16);
     await log('Sect. H. StrTab Sect. Idx', rpx.shstrIndex, hex16);
+    logperf('Got ELF header in', perf);
 
+    let perfx: number;
+    let perfList = performance.now();
     console.log('\n[Sections]');
     console.log('    ##  Name                      Type                            Virt.Addr.  Offset      Size        Ent. Size   Link  Info        Align       Flags');
     for (let i = 0; i < rpx.sections.length; i++) {
+        perf = performance.now();
         const section = rpx.sections[i]!;
         let str = '    ';
         str += i.toString().padEnd(2) + '  ';
+        perfx = performance.now();
         str += section.name.padEnd(24) + '  ';
+        logperf('\nGot section.name in', perfx);
+        perfx = performance.now();
         str += (stringifySectionType(section.type) + ' (' + hex32(section.type) + ')').padEnd(32);
+        logperf('Got section.type in', perfx);
+        perfx = performance.now();
         str += hex32(section.addr) + '  ';
+        logperf('Got section.addr in', perfx);
+        perfx = performance.now();
         str += hex32(section.offset) + '  ';
+        logperf('Got section.offset in', perfx);
+        perfx = performance.now();
         str += hex32(section.size) + '  ';
+        logperf('Got section.size in', perfx);
+        perfx = performance.now();
         str += hex32(section.entSize) + '  ';
+        logperf('Got section.entSize in', perfx);
+        perfx = performance.now();
         str += (+section.link ? section.link.toString() : '').padStart(4) + '  ';
+        logperf('Got section.link in', perfx);
+        perfx = performance.now();
         str += (+section.info ? hex32(section.info) : '').padStart(10) + '  ';
+        logperf('Got section.info in', perfx);
+        perfx = performance.now();
         str += hex32(section.addrAlign) + '  ';
+        logperf('Got section.addrAlign in', perfx);
+        perfx = performance.now();
         str += stringifySectionFlags(section.flags) + ' (' + hex32(section.flags) + ')';
+        logperf('Got section.flags in', perfx);
         console.log(str);
+        logperf('Got whole section in', perf);
     }
+    logperf('Got entire section list in', perfList);
 
-    console.log('\n[Special Sections]');
-    for (let i = 0; i < rpx.sections.length; i++) {
-        switch (+rpx.sections[i]!.type) {
-            case SectionType.StrTab: {
-                //break;
-                const section = rpx.sections[i] as StringSection;
-                console.log(`    Section #${i} - String Table:`);
-                for (const [addr, str] of Object.entries(section.strings)) {
-                    console.log(`        ${hex32(+addr)} = ${str}`);
+    if (specialSections) {
+        perfList = performance.now();
+        console.log('\n[Special Sections]');
+        for (let i = 0; i < rpx.sections.length; i++) {
+            switch (+rpx.sections[i]!.type) {
+                case SectionType.StrTab: {
+                    if (typeof specialSections !== 'boolean' && !specialSections.strings) break;
+                    const section = rpx.sections[i] as StringSection;
+                    console.log(`    Section #${i} - String Table:`);
+                    perf = performance.now();
+                    for (const [addr, str] of Object.entries(section.strings)) {
+                        console.log(`        ${hex32(+addr)} = ${str as string}`);
+                    }
+                    logperf('Traversed StringSection.strings in', perf);
+                    break;
                 }
-                break;
-            }
-            case SectionType.SymTab: {
-                //break;
-                const section = rpx.sections[i] as SymbolSection;
-                console.log(`    Section #${i} - Symbol Table:`);
-                console.log('        Value       Size        Type                    Binding  Visibility  Info Othr  Shndx  Name');
-                for (const sym of section.symbols) {
-                    let symstr = '        ';
-                    symstr += hex32(sym.value) + '  ' + hex32(sym.size) + '  ';
-                    symstr += stringifySymbolType(sym.type).padEnd(16);
-                    symstr += stringifySymbolBinding(sym.binding).padEnd(9);
-                    symstr += stringifySymbolVisibility(sym.visibility).padEnd(12);
-                    symstr += hex8(sym.info) + ' ' + hex8(sym.other) + '  ';
-                    symstr += sym.shndx.toString().padStart(5) + '  ' + sym.name;
-                    console.log(symstr);
+                case SectionType.SymTab: {
+                    if (typeof specialSections !== 'boolean' && !specialSections.symbols) break;
+                    const section = rpx.sections[i] as SymbolSection;
+                    console.log(`    Section #${i} - Symbol Table:`);
+                    console.log('        Value       Size        Type                    Binding  Visibility  Info Othr  Shndx  Name');
+                    perf = performance.now();
+                    for (const sym of section.symbols) {
+                        let symstr = '        ';
+                        symstr += hex32(sym.value) + '  ' + hex32(sym.size) + '  ';
+                        symstr += stringifySymbolType(sym.type).padEnd(16);
+                        symstr += stringifySymbolBinding(sym.binding).padEnd(9);
+                        symstr += stringifySymbolVisibility(sym.visibility).padEnd(12);
+                        symstr += hex8(sym.info) + ' ' + hex8(sym.other) + '  ';
+                        symstr += sym.shndx.toString().padStart(5) + '  ' + sym.name;
+                        console.log(symstr);
+                    }
+                    logperf('Traversed SymbolSection.symbols in', perf);
+                    break;
                 }
-                break;
-            }
-            case SectionType.Rela: {
-                break;
-                const section = rpx.sections[i] as RelocationSection;
-                console.log(`    Section #${i} - Relocations with addends:`);
-                console.log('        Addr.       Addend      Info        Type  Sym.Index');
-                for (const rel of section.relocations) {
-                    let relstr = '        ';
-                    relstr += hex32(rel.addr) + '  ' + hexSInt(32, rel.addend!) + '  ';
-                    relstr += `${hex32(rel.info)}  ${hex8(rel.type)}  ${rel.symbolIndex}`;
-                    console.log(relstr);
+                case SectionType.Rela: {
+                    if (typeof specialSections !== 'boolean' && !specialSections.relocations) break;
+                    const section = rpx.sections[i] as RelocationSection;
+                    console.log(`    Section #${i} - Relocations with addends:`);
+                    console.log('        Addr.       Addend      Info        Type  Sym.Index');
+                    perf = performance.now();
+                    for (const rel of section.relocations) {
+                        let relstr = '        ';
+                        relstr += hex32(rel.addr) + '  ' + hexSInt(32, rel.addend!) + '  ';
+                        relstr += `${hex32(rel.info)}  ${hex8(rel.type)}  ${rel.symbolIndex}`;
+                        console.log(relstr);
+                    }
+                    await Bun.write(Bun.stdout, '\n');
+                    logperf('Traversed RelocationSection.relocations in', perf);
+                    break;
                 }
-                await Bun.write(Bun.stdout, '\n');
-                break;
-            }
-            case SectionType.RPLCrcs: {
-                //break;
-                const section = rpx.sections[i] as RPLCrcSection;
-                console.log(`    Section #${i} - RPL CRCs:`);
-                const crcs = section.crcs;
-                await Bun.write(Bun.stdout, '        ');
-                for (let i = 0; i < crcs.length; i++) {
-                    await Bun.write(Bun.stdout, crcs[i]!.toString(16).toUpperCase().padStart(8, '0') + '    ');
-                    if ((i + 1) % 10 === 0) await Bun.write(Bun.stdout, '\n        ');
+                case SectionType.RPLCrcs: {
+                    if (typeof specialSections !== 'boolean' && !specialSections.rplcrcs) break;
+                    const section = rpx.sections[i] as RPLCrcSection;
+                    console.log(`    Section #${i} - RPL CRCs:`);
+                    perf = performance.now();
+                    const crcs = section.crcs;
+                    logperf('Computed RPLCrcSection.crcs in', perf);
+                    await Bun.write(Bun.stdout, '        ');
+                    for (let i = 0; i < crcs.length; i++) {
+                        await Bun.write(Bun.stdout, crcs[i]!.toString(16).toUpperCase().padStart(8, '0') + '    ');
+                        if ((i + 1) % 10 === 0) await Bun.write(Bun.stdout, '\n        ');
+                    }
+                    await Bun.write(Bun.stdout, '\n\n');
+                    break;
                 }
-                await Bun.write(Bun.stdout, '\n\n');
-                break;
+                case SectionType.RPLFileInfo: {
+                    if (typeof specialSections !== 'boolean' && !specialSections.rplfileinfo) break;
+                    const section = rpx.sections[i] as RPLFileInfoSection;
+                    perf = performance.now();
+                    console.log(`    Section #${i} - RPL File Info:`);
+                    console.log('        Magic:', hex16(section.fileinfo.magic));
+                    console.log('        Version:', hex16(section.fileinfo.version));
+                    console.log('        textSize:', hex32(section.fileinfo.textSize));
+                    console.log('        textAlign:', hex32(section.fileinfo.textAlign));
+                    console.log('        dataSize:', hex32(section.fileinfo.dataSize));
+                    console.log('        dataAlign:', hex32(section.fileinfo.dataAlign));
+                    console.log('        loadSize:', hex32(section.fileinfo.loadSize));
+                    console.log('        loadAlign:', hex32(section.fileinfo.loadAlign));
+                    console.log('        tempSize:', hex32(section.fileinfo.tempSize));
+                    console.log('        trampAdjust:', hex32(section.fileinfo.trampAdjust));
+                    console.log('        sdaBase:', hex32(section.fileinfo.sdaBase));
+                    console.log('        sda2Base:', hex32(section.fileinfo.sda2Base));
+                    console.log('        stackSize:', hex32(section.fileinfo.stackSize));
+                    console.log('        stringsOffset:', hex32(section.fileinfo.stringsOffset));
+                    console.log('        flags:', hex32(section.fileinfo.flags));
+                    console.log('        heapSize:', hex32(section.fileinfo.heapSize));
+                    console.log('        tagOffset:', hex32(section.fileinfo.tagOffset));
+                    console.log('        minVersion:', hex32(section.fileinfo.minVersion));
+                    console.log('        compressionLevel:', hexSInt(32, section.fileinfo.compressionLevel));
+                    console.log('        trampAddition:', hex32(section.fileinfo.trampAddition));
+                    console.log('        fileInfoPad:', hex32(section.fileinfo.fileInfoPad));
+                    console.log('        cafeSdkVersion:', hex32(section.fileinfo.cafeSdkVersion));
+                    console.log('        cafeSdkRevision:', hex32(section.fileinfo.cafeSdkRevision));
+                    console.log('        tlsModuleIndex:', hex16(section.fileinfo.tlsModuleIndex));
+                    console.log('        tlsAlignShift:', hex16(section.fileinfo.tlsAlignShift));
+                    console.log('        runtimeFileInfoSize:', hex32(section.fileinfo.runtimeFileInfoSize));
+                    console.log('        Strings:', section.fileinfo.strings);
+                    logperf('Traversed RPLFileInfoSection.fileinfo in', perf);
+                    break;
+                }
+                default: continue;
             }
-            case SectionType.RPLFileInfo: {
-                //break;
-                const section = rpx.sections[i] as RPLFileInfoSection;
-                console.log(`    Section #${i} - RPL File Info:`);
-                console.log('        Magic:', hex16(section.fileinfo.magic));
-                console.log('        Version:', hex16(section.fileinfo.version));
-                console.log('        textSize:', hex32(section.fileinfo.textSize));
-                console.log('        textAlign:', hex32(section.fileinfo.textAlign));
-                console.log('        dataSize:', hex32(section.fileinfo.dataSize));
-                console.log('        dataAlign:', hex32(section.fileinfo.dataAlign));
-                console.log('        loadSize:', hex32(section.fileinfo.loadSize));
-                console.log('        loadAlign:', hex32(section.fileinfo.loadAlign));
-                console.log('        tempSize:', hex32(section.fileinfo.tempSize));
-                console.log('        trampAdjust:', hex32(section.fileinfo.trampAdjust));
-                console.log('        sdaBase:', hex32(section.fileinfo.sdaBase));
-                console.log('        sda2Base:', hex32(section.fileinfo.sda2Base));
-                console.log('        stackSize:', hex32(section.fileinfo.stackSize));
-                console.log('        stringsOffset:', hex32(section.fileinfo.stringsOffset));
-                console.log('        flags:', hex32(section.fileinfo.flags));
-                console.log('        heapSize:', hex32(section.fileinfo.heapSize));
-                console.log('        tagOffset:', hex32(section.fileinfo.tagOffset));
-                console.log('        minVersion:', hex32(section.fileinfo.minVersion));
-                console.log('        compressionLevel:', hexSInt(32, section.fileinfo.compressionLevel));
-                console.log('        trampAddition:', hex32(section.fileinfo.trampAddition));
-                console.log('        fileInfoPad:', hex32(section.fileinfo.fileInfoPad));
-                console.log('        cafeSdkVersion:', hex32(section.fileinfo.cafeSdkVersion));
-                console.log('        cafeSdkRevision:', hex32(section.fileinfo.cafeSdkRevision));
-                console.log('        tlsModuleIndex:', hex16(section.fileinfo.tlsModuleIndex));
-                console.log('        tlsAlignShift:', hex16(section.fileinfo.tlsAlignShift));
-                console.log('        runtimeFileInfoSize:', hex32(section.fileinfo.runtimeFileInfoSize));
-                console.log('        Strings:', section.fileinfo.strings);
-                break;
-            }
-            default: continue;
         }
+        logperf('Got all special sections in', perfList);
     }
+    logperf('\nFinished debugging in', debugPerf);
 }
