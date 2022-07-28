@@ -33,7 +33,9 @@ export class StringStore {
         for (const key in this) {
             const keyn = Number(key);
             if (keyn !== keyn) continue;
-            buffer.set(encoder.encode(this[key]), keyn - this.#dataOffset);
+            const encoded = new Uint8Array(this[key].length + 1);
+            encoder.encodeInto(this[key], encoded);
+            buffer.set(encoded, keyn - this.#dataOffset);
         }
         return buffer;
     }
