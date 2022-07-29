@@ -178,7 +178,7 @@ export class StringSection extends Section {
         return new uint32(this.strings.size);
     }
 
-    strings: StringStore;
+    readonly strings: StringStore;
 }
 
 export class SymbolSection extends Section {
@@ -300,6 +300,7 @@ export class RPLFileInfoSection extends Section {
     constructor(inputdata: DataWrapper | Structs.RawSectionValues & { fileinfo?: Structs.RPLFileInfo }, rpx: RPL) {
         super(inputdata, rpx);
         if (!(inputdata instanceof DataWrapper)) {
+            this.strings = new StringStore();
             return this; // TODO
         }
         if (!super.hasData) throw new Error('RPL File Info section cannot be empty.');
@@ -308,7 +309,7 @@ export class RPLFileInfoSection extends Section {
         const data = new DataWrapper(super.data!);
 
         const magic = data.passUint16();
-        if (+magic !== 0xCAFE) throw new Error(`RPL File Info section magic number is invalid. Expected 0xCAFE, got 0x${magic.toString(16).toUpperCase()}`);
+        if (+magic !== +this.fileinfo.magic) throw new Error(`RPL File Info section magic number is invalid. Expected 0xCAFE, got 0x${magic.toString(16).toUpperCase()}`);
 
         this.fileinfo.version             = data.passUint16();
         this.fileinfo.textSize            = data.passUint32();
@@ -339,12 +340,12 @@ export class RPLFileInfoSection extends Section {
         // Section does not have strings
         // NOTE: Silently ignoring string offset out of bounds
         if (super.data!.byteLength === 0x60 || super.data!.byteLength <= this.fileinfo.stringsOffset) {
-            this.fileinfo.strings = new StringStore();
+            this.strings = new StringStore();
             return this;
         }
 
         const stringData = super.data!.subarray(+this.fileinfo.stringsOffset);
-        this.fileinfo.strings = new StringStore(stringData, +this.fileinfo.stringsOffset);
+        this.strings = new StringStore(stringData, +this.fileinfo.stringsOffset);
     }
 
     override get data(): ReadonlyDataWrapper {
@@ -375,15 +376,17 @@ export class RPLFileInfoSection extends Section {
         buffer.dropUint16(this.fileinfo.tlsModuleIndex);
         buffer.dropUint16(this.fileinfo.tlsAlignShift);
         buffer.dropUint32(this.fileinfo.runtimeFileInfoSize);
-        return new ReadonlyDataWrapper(Buffer.concat([buffer, this.fileinfo.strings.buffer]));
+        return new ReadonlyDataWrapper(Buffer.concat([buffer, this.strings.buffer]));
     }
     override get hasData(): true {
         return true;
     }
 
     override get size(): uint32 {
-        return new uint32(0x60 + this.fileinfo.strings.size);
+        return new uint32(0x60 + this.strings.size);
     }
 
-    fileinfo = new Structs.RPLFileInfo as Structs.RPLFileInfo & { strings: StringStore };
+    readonly fileinfo: Structs.RPLFileInfo = new Structs.RPLFileInfo;
+    /** Array of null-terminated strings until the end of the section */
+    readonly strings: StringStore;
 }
