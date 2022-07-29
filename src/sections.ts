@@ -84,6 +84,8 @@ export class Section extends Structs.Section {
      * - It is enforced that `Section.data` is always **NOT** compressed for functionality and simplicity.
      * - This function will **NOT** enable the `Compressed` flag in the Section instance `Section.flags`
      * property, instead the flag will be handled by the parent RPL/RPX (`Section.rpx`) class during save.
+     * - The `Compressed` flag is to be added/removed **by the user** to tell the library whether or not
+     * that section should be compressed on save, if compression is requested to `RPL.save()`
      * 
      * @returns `Buffer` containing the compressed data if successful.
      * @returns `false` if the section is not compressable or if the compression would make it larger than uncompressed.
