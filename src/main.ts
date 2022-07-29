@@ -18,8 +18,12 @@ console.time('parse file');
 const rpx = new RPL(RPX_DATA);
 console.timeEnd('parse file');
 
-console.time('debug file');
-await debug(rpx, { rplcrcs: true });
-console.timeEnd('debug file');
+//console.time('debug file');
+//await debug(rpx, { rplcrcs: true });
+//console.timeEnd('debug file');
+
+console.time('save file');
+await rpx.save('output.elf');
+console.timeEnd('save file');
 
 console.timeEnd('total');
