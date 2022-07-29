@@ -1,10 +1,10 @@
 import { uint8, uint16, uint32, sint32 } from './primitives';
 import * as Enums from './enums';
-import { StringStore } from './stringstore';
 
 export namespace Structs {
     export class Header {
-        readonly  magic = '\x7FELF' as const;                     //! uint32
+        /** Magic number of the ELF header, always `0x7F454C46` (`'\x7FELF'`) */
+        readonly  magic: uint32 = new uint32(0x7F454C46);         //! uint32 '\x7FELF'
         public    class: Enums.Class = Enums.Class.None;          //* uint8
         public    endian: Enums.Endian = Enums.Endian.None;       //* uint8
         public    version: Enums.Version = Enums.Version.None;    //* uint8
@@ -18,7 +18,7 @@ export namespace Structs {
         public    programHeadersOffset: uint32 = new uint32;      //! uint32
         public    sectionHeadersOffset: uint32 = new uint32;      //! uint32
         public    isaFlags: uint32 = new uint32;                  //! uint32
-        readonly  headerSize: uint16 = 0x0034 as const;           //? uint16
+        readonly  headerSize: uint16 = new uint16(0x0034);        //? uint16
         public    programHeadersEntrySize: uint16 = new uint16;   //? uint16
         public    programHeadersEntryCount: uint16 = new uint16;  //? uint16
         public    sectionHeadersEntrySize: uint16 = new uint16;   //? uint16
@@ -83,8 +83,8 @@ export namespace Structs {
 
     /** RPL-exclusive file information section data structure. */
     export class RPLFileInfo {
-        /** Magic number of the RPL_FILEINFO section, always 0xCAFE */
-        readonly magic = 0xCAFE as const;                  //? uint16
+        /** Magic number of the RPL File Info section, always `0xCAFE` */
+        readonly magic: uint16 = new uint16(0xCAFE);       //? uint16
         public   version: uint16 = new uint16;             //? uint16
         public   textSize: uint32 = new uint32;            //* uint32
         public   textAlign: uint32 = new uint32;           //* uint32
@@ -111,7 +111,5 @@ export namespace Structs {
         public   tlsModuleIndex: uint16 = new uint16;      //? uint16
         public   tlsAlignShift: uint16 = new uint16;       //? uint16
         public   runtimeFileInfoSize: uint32 = new uint32; //* uint32
-        /** Array of null-terminated strings until the end of the section */
-        public   strings?: StringStore;
     }
 }
