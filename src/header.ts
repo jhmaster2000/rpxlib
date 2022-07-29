@@ -11,7 +11,7 @@ export class Header extends Structs.Header {
         this.version = file.passUint8() as Version;
         this.abi = file.passUint8() as ABI;
         this.abiVersion = file.passUint8();
-        file.pos += 7; //? Padding
+        file.pos += 7; //? padding
         this.type = file.passUint16() as Type;
         this.isa = file.passUint16() as ISA;
         this.isaVersion = file.passUint32();
