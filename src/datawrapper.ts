@@ -19,65 +19,70 @@ export class DataWrapper extends Buffer {
 
     pos: number = 0;
 
-    passUint8 = function(this: DataWrapper) {
+    passUint8 = function(this: DataWrapper): uint8 {
         const v = this.readUint8(this.pos);
         this.pos += 1;
         return new uint8(v);
     };
-    passUint16 = function(this: DataWrapper) {
+    passUint16 = function(this: DataWrapper): uint16 {
         const v = this.readUint16BE(this.pos);
         this.pos += 2;
         return new uint16(v);
     };
-    passUint32 = function(this: DataWrapper) {
+    passUint32 = function(this: DataWrapper): uint32 {
         const v = this.readUint32BE(this.pos);
         this.pos += 4;
         return new uint32(v);
     };
-    passInt8 = function(this: DataWrapper) {
+    passInt8 = function(this: DataWrapper): sint8 {
         const v = this.readInt8(this.pos);
         this.pos += 1;
         return new sint8(v);
     };
-    passInt16 = function(this: DataWrapper) {
+    passInt16 = function(this: DataWrapper): sint16 {
         const v = this.readInt16BE(this.pos);
         this.pos += 2;
         return new sint16(v);
     };
-    passInt32 = function(this: DataWrapper) {
+    passInt32 = function(this: DataWrapper): sint32 {
         const v = this.readInt32BE(this.pos);
         this.pos += 4;
         return new sint32(v);
     };
 
-    dropUint8 = function(this: DataWrapper, value: uint8) {
+    dropUint8 = function(this: DataWrapper, value: uint8): void {
         this.writeUint8(+value, this.pos);
         this.pos += 1;
     };
-    dropUint16 = function(this: DataWrapper, value: uint16) {
+    dropUint16 = function(this: DataWrapper, value: uint16): void {
         this.writeUint16BE(+value, this.pos);
         this.pos += 2;
     };
-    dropUint32 = function(this: DataWrapper, value: uint32) {
+    dropUint32 = function(this: DataWrapper, value: uint32): void {
         this.writeUint32BE(+value, this.pos);
         this.pos += 4;
     };
-    dropInt8 = function(this: DataWrapper, value: sint8) {
+    dropInt8 = function(this: DataWrapper, value: sint8): void {
         this.writeInt8(+value, this.pos);
         this.pos += 1;
     };
-    dropInt16 = function(this: DataWrapper, value: sint16) {
+    dropInt16 = function(this: DataWrapper, value: sint16): void {
         this.writeInt16BE(+value, this.pos);
         this.pos += 2;
     };
-    dropInt32 = function(this: DataWrapper, value: sint32) {
+    dropInt32 = function(this: DataWrapper, value: sint32): void {
         this.writeInt32BE(+value, this.pos);
         this.pos += 4;
     };
 
-    drop = function(this: DataWrapper, values: TypedArray | number[]) {
+    drop = function(this: DataWrapper, values: TypedArray | number[]): void {
         this.set(values, this.pos);
         this.pos += (<TypedArray>values).byteLength ?? values.length;
+    };
+
+    zerofill = function(this: DataWrapper, byteCount: number): void {
+        this.fill(0, this.pos, this.pos + byteCount);
+        this.pos += byteCount;
     };
 }
 
@@ -143,4 +148,5 @@ export class ReadonlyDataWrapper extends DataWrapper {
     override dropInt16  = (): void => { return; };
     override dropInt32  = (): void => { return; };
     override drop       = (): void => { return; };
+    override zerofill   = (): void => { return; };
 }
