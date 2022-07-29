@@ -74,6 +74,11 @@ export class DataWrapper extends Buffer {
         this.writeInt32BE(+value, this.pos);
         this.pos += 4;
     };
+
+    drop = function(this: DataWrapper, values: TypedArray | number[]) {
+        this.set(values, this.pos);
+        this.pos += (<TypedArray>values).byteLength ?? values.length;
+    };
 }
 
 export class ReadonlyDataWrapper extends DataWrapper {
@@ -137,4 +142,5 @@ export class ReadonlyDataWrapper extends DataWrapper {
     override dropInt8   = (): void => { return; };
     override dropInt16  = (): void => { return; };
     override dropInt32  = (): void => { return; };
+    override drop       = (): void => { return; };
 }
