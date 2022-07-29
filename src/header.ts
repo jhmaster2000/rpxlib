@@ -5,7 +5,7 @@ import { Structs } from './structs';
 export class Header extends Structs.Header {
     constructor(file: DataWrapper) {
         super();
-        file.pos = 4; //? magic
+        if (+file.passUint32() !== +this.magic) throw new Error('The data provided is not an ELF file.');
         this.class = file.passUint8() as Class;
         this.endian = file.passUint8() as Endian;
         this.version = file.passUint8() as Version;
@@ -44,7 +44,7 @@ export class Header extends Structs.Header {
     override readonly sectionHeadersOffset;
     /**
      * @internal Do not access outside of the Header class or the RPL class constructor.
-     * This property is deleted outside of the Header class/RPL constructor as it's invalidated by RPL class in favor of `RPL.sections.length`.
+     * This property is deleted outside of the Header class/RPL constructor as it's invalidated by RPL class in favor of `RPL.sectionHeadersEntryCount`.
      */
     protected override readonly _sectionHeadersEntryCount;
 }
