@@ -105,7 +105,7 @@ export async function debug(rpx: RPL, specialSections: boolean | SpecialSections
     const debugPerf = performance.now();
     let perf = performance.now();
     console.log('[ELF Header]');
-    await log('Magic                    ', rpx.magic);
+    await log('Magic                    ', new TextDecoder().decode(new Uint8Array([(<number>rpx.magic) >> 24 & 0xFF, (<number>rpx.magic) >> 16 & 0xFF, (<number>rpx.magic) >> 8 & 0xFF, (<number>rpx.magic) & 0xFF])));
     await log('Class                    ', rpx.class, stringifyClass, hex8);
     await log('Endian                   ', rpx.endian, stringifyEndian, hex8);
     await log('Version                  ', rpx.version, stringifyVersion, hex8);
@@ -267,7 +267,7 @@ export async function debug(rpx: RPL, specialSections: boolean | SpecialSections
                     console.log('        tlsModuleIndex:', hex16(section.fileinfo.tlsModuleIndex));
                     console.log('        tlsAlignShift:', hex16(section.fileinfo.tlsAlignShift));
                     console.log('        runtimeFileInfoSize:', hex32(section.fileinfo.runtimeFileInfoSize));
-                    console.log('        Strings:', section.fileinfo.strings);
+                    console.log('        Strings:', section.strings);
                     logperf('Traversed RPLFileInfoSection.fileinfo in', perf);
                     break;
                 }
