@@ -63,7 +63,7 @@ export class RPL extends Header {
         for (let i = 0; i < this.#sections.length; i++) {
             const section = this.#sections[i];
             const sectionSize = section.size;
-            totalSectionSizes += <number>sectionSize;
+            if (section.hasData) totalSectionSizes += <number>sectionSize;
             // Saving without compression, disable all Compressed flags
             if (compression === false && <number>section.flags & SectionFlags.Compressed) (<number>section.flags) &= ~SectionFlags.Compressed;
             headers.dropUint32(section.nameOffset);
@@ -83,9 +83,15 @@ export class RPL extends Header {
         const sectionsData = new DataWrapper(Bun.allocUnsafe(totalSectionSizes));
         for (let i = 0; i < this.#sections.length; i++) {
             const section = this.#sections[i];
-            if (!section.hasData) continue;
-
             const ix = i * 4;
+
+            if (!section.hasData) {
+                crcs[ix  ] = 0x00;
+                crcs[ix+1] = 0x00;
+                crcs[ix+2] = 0x00;
+                crcs[ix+3] = 0x00;
+                continue;
+            }
 
             if (section instanceof RPLCrcSection) {
                 crcsPos = sectionsData.pos;
@@ -108,13 +114,14 @@ export class RPL extends Header {
 
         if (crcsPos !== 0) {
             const endPos = sectionsData.pos;
-            sectionsData.pos = crcsPos + 1;
+            sectionsData.pos = crcsPos;
             sectionsData.drop(crcs);
             sectionsData.pos = endPos;
         }
 
+        const file = Bun.concatArrayBuffers([headers, sectionsData]);
         // @ts-expect-error missing from bun-types
-        await Bun.write(path, Bun.concatArrayBuffers([headers, sectionsData]));
+        await Bun.write(path, file);
     }
 
     #sections: Section[];
