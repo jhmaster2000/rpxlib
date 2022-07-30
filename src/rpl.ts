@@ -1,3 +1,4 @@
+import crc32 from './crc32.js';
 import { DataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { Header } from './header';
@@ -35,7 +36,7 @@ export class RPL extends Header {
      * `true` uses the default level (`-1`). `false` disables compression (default).
      */
     async save(path: string, compression: boolean | -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 = false): Promise<void> {
-        const headers = new DataWrapper(Bun.allocUnsafe(<number>this.sectionHeadersOffset + (this.sections.length * <number>this.sectionHeadersEntrySize)));
+        const headers = new DataWrapper(Bun.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
         headers.dropUint8(this.endian);
@@ -58,8 +59,11 @@ export class RPL extends Header {
         headers.dropUint16(this.shstrIndex);
         headers.zerofill(<number>this.sectionHeadersOffset - <number>this.headerSize); //? padding
 
-        for (let i = 0; i < this.sections.length; i++) {
-            const section = this.sections[i];
+        let totalSectionSizes = 0;
+        for (let i = 0; i < this.#sections.length; i++) {
+            const section = this.#sections[i];
+            const sectionSize = section.size;
+            totalSectionSizes += <number>sectionSize;
             // Saving without compression, disable all Compressed flags
             if (compression === false && <number>section.flags & SectionFlags.Compressed) (<number>section.flags) &= ~SectionFlags.Compressed;
             headers.dropUint32(section.nameOffset);
@@ -67,14 +71,50 @@ export class RPL extends Header {
             headers.dropUint32(section.flags);
             headers.dropUint32(section.addr);
             headers.dropUint32(section.offset);
-            headers.dropUint32(section.size);
+            headers.dropUint32(sectionSize);
             headers.dropUint32(section.link);
             headers.dropUint32(section.info);
             headers.dropUint32(section.addrAlign);
             headers.dropUint32(section.entSize);
         }
 
-        await Bun.write(path, headers);
+        let crcsPos = 0;
+        let crcs: number[] = [];
+        const sectionsData = new DataWrapper(Bun.allocUnsafe(totalSectionSizes));
+        for (let i = 0; i < this.#sections.length; i++) {
+            const section = this.#sections[i];
+            if (!section.hasData) continue;
+
+            const ix = i * 4;
+
+            if (section instanceof RPLCrcSection) {
+                crcsPos = sectionsData.pos;
+                crcs[ix  ] = 0x00;
+                crcs[ix+1] = 0x00;
+                crcs[ix+2] = 0x00;
+                crcs[ix+3] = 0x00;
+                sectionsData.pos += this.#sections.length * <number>section.entSize;
+                continue;
+            }
+
+            const data = section.data!;
+            sectionsData.drop(data);
+            const crc = crc32(data);
+            crcs[ix  ] = crc >> 24 & 0xFF;
+            crcs[ix+1] = crc >> 16 & 0xFF;
+            crcs[ix+2] = crc >>  8 & 0xFF;
+            crcs[ix+3] = crc       & 0xFF;
+        }
+
+        if (crcsPos !== 0) {
+            const endPos = sectionsData.pos;
+            sectionsData.pos = crcsPos + 1;
+            sectionsData.drop(crcs);
+            sectionsData.pos = endPos;
+        }
+
+        // @ts-expect-error missing from bun-types
+        await Bun.write(path, Bun.concatArrayBuffers([headers, sectionsData]));
     }
 
     #sections: Section[];
