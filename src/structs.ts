@@ -27,8 +27,8 @@ export namespace Structs {
     }
 
     export class Section {
-        /** Offset from the start of the {@link Header.shstrIndex section headers string table} 
-          * to the address of this section's name in said table, if any. */
+        /** Offset from the start of the section headers string table to
+          * the address of this section's name in said table, if any. */
         public    nameOffset: uint32 = new uint32;    //! uint32
         public    type: Enums.SectionType = Enums.SectionType.Null; //! uint32
         public    flags: uint32 = new uint32;         //! uint32
