@@ -120,11 +120,13 @@ export class Section extends Structs.Section {
         const idx = sections.indexOf(this);
         if (idx === 0) {
             const off = <number>this.rpx.sectionHeadersOffset + <number>this.rpx.sectionHeadersEntrySize * this.rpx.sections.length;
-            return new uint32(off + off % 2);
+            //return new uint32(off + off % 2);
+            return new uint32(off);
         }
         const prevSect = sections[idx - 1]!;
         const off = <number>prevSect.offset + <number>prevSect.size;
-        return new uint32(off + off % 2);
+        //return new uint32(off + off % 2);
+        return new uint32(off);
     }
 
     get size(): uint32 {
@@ -275,7 +277,7 @@ export class RPLCrcSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        return new ReadonlyDataWrapper(new Uint32Array(this.crcs as number[]).buffer).swap32();
+        return new ReadonlyDataWrapper(new Uint32Array(this.crcs.map(x => +x)).buffer).swap32();
     }
     override get hasData(): true {
         return true;
