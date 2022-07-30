@@ -84,14 +84,21 @@ export class DataWrapper extends Buffer {
         this.fill(0, this.pos, this.pos + byteCount);
         this.pos += byteCount;
     };
+
+    override swap16 = function(this: DataWrapper): DataWrapper { return swap16(this); };
+    override swap32 = function(this: DataWrapper): DataWrapper { return swap32(this); };
+    override swap64 = function(this: DataWrapper): DataWrapper { return swap64(this); };
 }
 
 export class ReadonlyDataWrapper extends DataWrapper {
     readonly [k: number]: number;
     override get buffer(): ArrayBuffer { throw new Error('Cannot access writable ArrayBuffer of ReadonlyDataWrapper instance.'); }
-    override swap16 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap16(); };
-    override swap32 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap32(); };
-    override swap64 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return (Uint8Array.prototype.slice.call(this) as ReadonlyDataWrapper).swap64(); };
+    //@ts-expect-error intellisense is drunk
+    override swap16 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return new ReadonlyDataWrapper(swap16(Uint8Array.prototype.slice.call(this))); };
+    //@ts-expect-error intellisense is drunk
+    override swap32 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return new ReadonlyDataWrapper(swap32(Uint8Array.prototype.slice.call(this))); };
+    //@ts-expect-error intellisense is drunk
+    override swap64 = function(this: ReadonlyDataWrapper): ReadonlyDataWrapper { return new ReadonlyDataWrapper(swap64(Uint8Array.prototype.slice.call(this))); };
     override write = function(this: ReadonlyDataWrapper): 0 { return 0; };
     override writeFloatBE = function(this: ReadonlyDataWrapper): 0 { return 0; };
     override writeFloatLE = function(this: ReadonlyDataWrapper): 0 { return 0; };
@@ -149,4 +156,32 @@ export class ReadonlyDataWrapper extends DataWrapper {
     override dropInt32  = (): void => { return; };
     override drop       = (): void => { return; };
     override zerofill   = (): void => { return; };
+}
+
+function swap(b: Uint8Array, n: number, m: number): void { const i = b[n]; b[n] = b[m]; b[m] = i; }
+function swap16<T extends Uint8Array>(b: T): T {
+    const len = b.length;
+    if (len % 2 !== 0) throw new RangeError('Buffer size must be a multiple of 16-bits');
+    for (let i = 0; i < len; i += 2) swap(b, i, i + 1);
+    return b;
+}
+function swap32<T extends Uint8Array>(b: T): T {
+    const len = b.length;
+    if (len % 4 !== 0) throw new RangeError('Buffer size must be a multiple of 32-bits');
+    for (let i = 0; i < len; i += 4) {
+        swap(b, i    , i + 3);
+        swap(b, i + 1, i + 2);
+    }
+    return b;
+}
+function swap64<T extends Uint8Array>(b: T): T {
+    const len = b.length;
+    if (len % 8 !== 0) throw new RangeError('Buffer size must be a multiple of 64-bits');
+    for (let i = 0; i < len; i += 8) {
+        swap(b, i    , i + 7);
+        swap(b, i + 1, i + 6);
+        swap(b, i + 2, i + 5);
+        swap(b, i + 3, i + 4);
+    }
+    return b;
 }
