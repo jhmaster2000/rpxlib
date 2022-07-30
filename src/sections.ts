@@ -128,7 +128,7 @@ export class Section extends Structs.Section {
     }
 
     get size(): uint32 {
-        return new uint32(this.data?.byteLength ?? 0);
+        return new uint32(this.data?.byteLength ?? (+this.type === SectionType.NoBits ? <number>this.storedSize : 0));
     }
 
     get linkedSection(): Section | null {

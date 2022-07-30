@@ -67,7 +67,7 @@ export class RPL extends Header {
             headers.dropUint32(section.flags);
             headers.dropUint32(section.addr);
             headers.dropUint32(section.offset);
-            headers.dropUint32(section.size); // TODO: Fix .bss saving with size 0
+            headers.dropUint32(section.size);
             headers.dropUint32(section.link);
             headers.dropUint32(section.info);
             headers.dropUint32(section.addrAlign);
