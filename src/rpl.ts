@@ -1,4 +1,5 @@
-import crc32 from './crc32.js';
+import fs from 'fs';
+import crc32 from './crc32';
 import { DataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { Header } from './header';
@@ -35,7 +36,7 @@ export class RPL extends Header {
      * @param compression The compression level to use on sections with the `Compressed` flag enabled.
      * `true` uses the default level (`-1`). `false` disables compression (default).
      */
-    async save(path: string, compression: boolean | -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 = false): Promise<void> {
+    save(path: string, compression: boolean | -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 = false): void {
         const headers = new DataWrapper(Bun.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
@@ -120,7 +121,7 @@ export class RPL extends Header {
         }
 
         const file = Bun.concatArrayBuffers([headers, sectionsData]);
-        await Bun.write(path, file);
+        fs.writeFileSync(path, file);
     }
 
     #sections: Section[];
