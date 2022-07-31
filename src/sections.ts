@@ -1,3 +1,4 @@
+import Bun from 'bun';
 import crc32 from './crc32';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
@@ -9,14 +10,10 @@ import { Structs } from './structs';
 import { ELFSymbol } from './symbol';
 
 function inflateSync(buf: Uint8Array): Uint8Array {
-    //@ts-expect-error missing from bun-types
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    return Bun.gunzipSync(buf) as Uint8Array;
+    return Bun.gunzipSync(buf);
 }
-function deflateSync(buf: Uint8Array, opts?: { windowBits?: number, level?: number, memLevel?: number, strategy?: number }): Uint8Array {
-    //@ts-expect-error missing from bun-types
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    return Bun.gzipSync(buf, opts) as Uint8Array;
+function deflateSync(buf: Uint8Array, opts?: Bun.ZlibCompressionOptions): Uint8Array {
+    return Bun.gzipSync(buf, opts);
 }
 
 export class Section extends Structs.Section {

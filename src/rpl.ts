@@ -120,7 +120,6 @@ export class RPL extends Header {
         }
 
         const file = Bun.concatArrayBuffers([headers, sectionsData]);
-        // @ts-expect-error missing from bun-types
         await Bun.write(path, file);
     }
 
