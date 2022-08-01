@@ -1,5 +1,4 @@
 import fs from 'fs';
-import crc32 from './crc32';
 import { DataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { Header } from './header';
@@ -7,7 +6,7 @@ import { uint16 } from './primitives';
 import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
 
 export class RPL extends Header {
-    constructor(data: ArrayBuffer) {
+    constructor(data: TypedArray) {
         const file = new DataWrapper(data);
         super(file);
 
@@ -15,7 +14,9 @@ export class RPL extends Header {
         file.pos = +this.sectionHeadersOffset;
 
         for (let i = 0; i < this._sectionHeadersEntryCount; i++) {
-            const sectionType: SectionType = file.readUint32BE(file.pos + 4);
+            file.pos += 4;
+            const sectionType: SectionType = file.passUint32() as SectionType;
+            file.pos -= 8;
             switch (sectionType) {
                 case SectionType.StrTab:      this.#sections[i] = new StringSection(file, this); break;
                 case SectionType.SymTab:      this.#sections[i] = new SymbolSection(file, this); break;
@@ -106,7 +107,7 @@ export class RPL extends Header {
 
             const data = section.data!;
             sectionsData.drop(data);
-            const crc = crc32(data);
+            const crc = Number(Bun.hash.crc32(data));
             crcs[ix  ] = crc >> 24 & 0xFF;
             crcs[ix+1] = crc >> 16 & 0xFF;
             crcs[ix+2] = crc >>  8 & 0xFF;
@@ -120,7 +121,7 @@ export class RPL extends Header {
             sectionsData.pos = endPos;
         }
 
-        const file = Bun.concatArrayBuffers([headers, sectionsData]);
+        const file = Buffer.concat([headers, sectionsData]);
         fs.writeFileSync(path, file);
     }
 

@@ -1,10 +1,11 @@
 import { int } from './primitives';
 
+/** @internal */
 type WritableStringStore = StringStore & { [offset: number]: string };
 
 export class StringStore {
     readonly #dataOffset: number = 0;
-    constructor(data?: Buffer, dataOffset: number = 0) {
+    constructor(data?: Uint8Array, dataOffset: number = 0) {
         if (!data) return this;
         this.#dataOffset = dataOffset;
         const strings = this as WritableStringStore;
@@ -27,13 +28,13 @@ export class StringStore {
         return sz;
     }
     /** All of the StringStore's strings as a buffer. */
-    get buffer(): Buffer {
-        const buffer = Buffer.allocUnsafe(this.size);
-        const encoder = new TextEncoder('utf-8');
+    get buffer(): Uint8Array {
+        const buffer = Bun.allocUnsafe(this.size);
+        const encoder = new TextEncoder();
         for (const key in this) {
-            const keyn = Number(key);
+            const keyn = +key;
             if (keyn !== keyn) continue;
-            const encoded = new Uint8Array(this[key].length + 1);
+            const encoded = Bun.allocUnsafe(this[key].length + 1);
             encoder.encodeInto(this[key], encoded);
             buffer.set(encoded, keyn - this.#dataOffset);
         }
@@ -44,7 +45,7 @@ export class StringStore {
         let str = this[(<number>offset)];
         if (!str) {
             for (const key in this) {
-                const keyn = Number(key);
+                const keyn = +key;
                 if (keyn < offset) {
                     const keynStr = this[keyn];
                     if (keyn + keynStr.length > offset) {
@@ -65,7 +66,7 @@ export class StringStore {
     }
     add(str: string): number {
         const strings = this as WritableStringStore;
-        const lastOffset = Object.keys(strings).map(Number).filter(x => x === x).sort((a, b) => b - a)[0];
+        const lastOffset = Object.keys(strings).map(x => +x).filter(x => x === x).sort((a, b) => b - a)[0];
         const nextOffset = lastOffset + strings[lastOffset].length + 1;
         strings[nextOffset] = str;
         return nextOffset;

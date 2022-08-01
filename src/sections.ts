@@ -1,5 +1,4 @@
 import Bun from 'bun';
-import crc32 from './crc32';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { uint32 } from './primitives';
@@ -17,7 +16,7 @@ function deflateSync(buf: Uint8Array, opts?: Bun.ZlibCompressionOptions): Uint8A
 }
 
 export class Section extends Structs.Section {
-    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { data?: Buffer | null }, rpx: RPL) {
+    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { data?: Uint8Array | null }, rpx: RPL) {
         super();
         this.rpx = rpx;
         if (!(inputdata instanceof DataWrapper)) {
@@ -62,7 +61,7 @@ export class Section extends Structs.Section {
                 // Decompress section data
                 const decompressed = inflateSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
                 //(<number>this.flags) &= ~SectionFlags.Compressed;
-                this.#data = Buffer.from(decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength));
+                this.#data = decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength);
             } else {
                 // Section is not compressed
                 this.#data = file.subarray(<number>this.storedOffset, <number>this.storedOffset + <number>this.storedSize);
@@ -84,13 +83,13 @@ export class Section extends Structs.Section {
      * - The `Compressed` flag is to be added/removed **by the user** to tell the library whether or not
      * that section should be compressed on save, if compression is requested to `RPL.save()`
      * 
-     * @returns `Buffer` containing the compressed data if successful.
+     * @returns `Uint8Array` containing the compressed data if successful.
      * @returns `false` if the section is not compressable or if the compression would make it larger than uncompressed.
      */
-    tryCompress(compressionLevel?: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): Buffer | false {
+    tryCompress(compressionLevel?: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): Uint8Array | false {
         if (!this.hasData || +this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return false;
 
-        const compressed = Buffer.concat([Buffer.allocUnsafe(4), deflateSync(this.data!, { level: compressionLevel })]);
+        const compressed = Buffer.concat([Bun.allocUnsafe(4), deflateSync(this.data!, { level: compressionLevel })]);
         compressed.writeUint32BE(+this.size, 0);
         if (compressed.byteLength > this.size) return false;
         //(<number>this.flags) |= SectionFlags.Compressed;
@@ -135,14 +134,14 @@ export class Section extends Structs.Section {
     }
 
     get crc32Hash(): uint32 {
-        return new uint32(this.hasData ? crc32(this.data!) : 0x00000000);
+        return new uint32(this.hasData ? Number(Bun.hash.crc32(this.data!)) : 0x00000000);
     }
     
-    get data(): Buffer | null {
+    get data(): Uint8Array | null {
         return this.#data;
     }
 
-    set data(value: Buffer | null) {
+    set data(value: Uint8Array | null) {
         if (!this.hasData) throw new TypeError('Cannot set data of NoBits or Null section.');
         if (value === null || value.byteLength === 0) throw new TypeError('Cannot set data of section to empty data or null.');
         this.#data = value;
@@ -154,7 +153,7 @@ export class Section extends Structs.Section {
 
     /** @internal The RPL/RPX file this Section belongs to. */
     protected readonly rpx: RPL;
-    #data: Buffer | null = null;
+    #data: Uint8Array | null = null;
 }
 
 export class StringSection extends Section {
@@ -205,7 +204,7 @@ export class SymbolSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(new ArrayBuffer(<number>this.entSize * this.symbols.length));
+        const buffer = new DataWrapper(Bun.allocUnsafe(<number>this.entSize * this.symbols.length));
         for (const sym of this.symbols) {
             buffer.dropUint32(sym.nameOffset);
             buffer.dropUint32(sym.value);
@@ -248,7 +247,7 @@ export class RelocationSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(new ArrayBuffer(<number>this.entSize * this.relocations.length));
+        const buffer = new DataWrapper(Bun.allocUnsafe(<number>this.entSize * this.relocations.length));
         for (const reloc of this.relocations) {
             buffer.dropUint32(reloc.addr);
             buffer.dropUint32(reloc.info);
@@ -274,7 +273,7 @@ export class RPLCrcSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        return new ReadonlyDataWrapper(new Uint32Array(this.crcs.map(x => +x)).buffer).swap32();
+        return new ReadonlyDataWrapper(new Uint32Array(this.crcs.map(x => +x))).swap32();
     }
     override get hasData(): true {
         return true;
@@ -340,7 +339,7 @@ export class RPLFileInfoSection extends Section {
 
         // Section does not have strings
         // NOTE: Silently ignoring string offset out of bounds
-        if (super.data!.byteLength === 0x60 || super.data!.byteLength <= this.fileinfo.stringsOffset) {
+        if (super.data!.byteLength === 0x60 || this.fileinfo.stringsOffset < 0x60 || super.data!.byteLength <= this.fileinfo.stringsOffset) {
             this.strings = new StringStore();
             return this;
         }
@@ -350,7 +349,7 @@ export class RPLFileInfoSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(new ArrayBuffer(0x60));
+        const buffer = new DataWrapper(Bun.allocUnsafe(0x60));
         buffer.dropUint16(this.fileinfo.magic);
         buffer.dropUint16(this.fileinfo.version);
         buffer.dropUint32(this.fileinfo.textSize);
