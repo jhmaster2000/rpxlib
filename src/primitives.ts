@@ -61,3 +61,5 @@ export class sint32 extends Number {
 //type sint16 = number;
 //type sint32 = number;
 export type int = uint8 | uint16 | uint32 | sint8 | sint16 | sint32;
+
+export type ZlibCompressionLevels = -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
