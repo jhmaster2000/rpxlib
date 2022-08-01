@@ -91,7 +91,7 @@ export class Section extends Structs.Section {
 
         const compressed = Buffer.concat([Bun.allocUnsafe(4), deflateSync(this.data!, { level: compressionLevel })]);
         compressed.writeUint32BE(+this.size, 0);
-        if (compressed.byteLength > this.size) return false;
+        if (compressed.byteLength >= this.size) return false;
         //(<number>this.flags) |= SectionFlags.Compressed;
         return compressed.subarray(compressed.byteOffset, compressed.byteOffset + compressed.byteLength);
     }
