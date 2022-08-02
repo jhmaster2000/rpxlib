@@ -48,6 +48,8 @@ namespace zlibng {
     //type Z_U4 = typeof ZlibFFIType.Z_U4; //type z_crc_t = Z_U4;
     //type z_off_t = typeof ZlibFFIType.z_off_t;
     //type cstring = typeof ZlibFFIType.cstring;
+
+    export type CompressionLevel = -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
     
     const {
         symbols: libzng,

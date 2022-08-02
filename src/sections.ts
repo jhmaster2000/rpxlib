@@ -1,12 +1,13 @@
 import Bun from 'bun';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
-import { uint32, ZlibCompressionLevel } from './primitives';
+import { uint32 } from './primitives';
 import { Relocation } from './relocation';
 import { RPL } from './rpl';
 import { StringStore } from './stringstore';
 import { Structs } from './structs';
 import { ELFSymbol } from './symbol';
+import zlibng from './zlibng';
 
 function inflateSync(buf: Uint8Array): Uint8Array {
     return Bun.gunzipSync(buf);
@@ -87,7 +88,7 @@ export class Section extends Structs.Section {
      * @returns `number` value of the size of the section uncompressed if the compression would make it larger than uncompressed.
      * @returns `0` if the section is not compressable.
      */
-    tryCompress(compressionLevel?: ZlibCompressionLevel): Uint8Array | number {
+    tryCompress(compressionLevel?: zlibng.CompressionLevel): Uint8Array | number {
         // NOTE: Another instance of hardcoding NoBits size retrieval
         if (!this.hasData) return +this.type === SectionType.NoBits ? +this.storedSize : 0;
         if (+this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return +this.size;

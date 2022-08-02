@@ -3,7 +3,7 @@ import zlibng from './zlibng';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { Header } from './header';
-import { sint32, uint16, uint32, ZlibCompressionLevel } from './primitives';
+import { sint32, uint16, uint32 } from './primitives';
 import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
 
 interface RPLSaveOptions {
@@ -59,7 +59,7 @@ export class RPL extends Header {
      * - `-1` uses the default zlib compression level of `6`.
      * - `0` disables compression but still wraps the data in a zlib header and footer.
      */
-    save(path: string, compression: boolean | ZlibCompressionLevel = false, options?: RPLSaveOptions): void {
+    save(path: string, compression: boolean | zlibng.CompressionLevel = false, options?: RPLSaveOptions): void {
         const headers = new DataWrapper(Bun.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
@@ -84,7 +84,7 @@ export class RPL extends Header {
         headers.zerofill(<number>this.sectionHeadersOffset - <number>this.headerSize); //? padding
 
         const fileinfoSection = (<RPLFileInfoSection>this.#sections.find(s => s instanceof RPLFileInfoSection));
-        if (compression === true) compression = <ZlibCompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
+        if (compression === true) compression = <zlibng.CompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
         else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? -1 : compression);
 
         let currOffset = <number>this.sectionHeadersOffset + <number>this.sectionHeadersEntrySize * this.#sections.length;
