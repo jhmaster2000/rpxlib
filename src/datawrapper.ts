@@ -98,7 +98,9 @@ export class DataWrapper extends Uint8Array {
 
 export class ReadonlyDataWrapper extends DataWrapper {
     readonly [k: number]: number;
-    override get buffer(): ArrayBuffer { throw new Error('Cannot access writable ArrayBuffer of ReadonlyDataWrapper instance.'); }
+    /** @internal For internal APIs */
+    protected get '@@arraybuffer'(): ArrayBuffer { return super.buffer; }
+    override get buffer(): never { throw new Error('Cannot access writable ArrayBuffer of ReadonlyDataWrapper instance.'); }
     override reverse(): ReadonlyDataWrapper { return new ReadonlyDataWrapper(new Uint8Array(this).reverse()); }
     override set(...$: Discarded): void { return; }
     override slice(start?: number, end?: number) { return new ReadonlyDataWrapper(super.slice(start, end)); }
