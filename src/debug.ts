@@ -2,9 +2,10 @@ import { ABI, Class, Endian, ISA, SectionFlags, SectionType, SymbolBinding, Symb
 import { int, sint16, sint32, sint8, uint32 } from './primitives';
 import { RPL } from './rpl';
 import { RelocationSection, RPLCrcSection, RPLFileInfoSection, StringSection, SymbolSection } from './sections';
+import Util from './util';
 
 async function log<T>(label: string, value: T, formatter: (v: T) => string = String, parenFormatter?: (v: T) => string, endline = true) {
-    await Bun.write(Bun.stdout,
+    await Util.write(Util.stdout,
         '   ' + label + ' | ' + formatter(value) +
         (parenFormatter ? ` (${parenFormatter(value)})` : '') +
         (endline ? '\n' : '')
@@ -217,7 +218,7 @@ export async function debug(rpx: RPL, specialSections: boolean | SpecialSections
                         relstr += `${hex32(rel.info)}  ${hex8(rel.type)}  ${rel.symbolIndex}`;
                         console.log(relstr);
                     }
-                    await Bun.write(Bun.stdout, '\n');
+                    await Util.write(Util.stdout, '\n');
                     logperf('Traversed RelocationSection.relocations in', perf);
                     break;
                 }
@@ -228,12 +229,12 @@ export async function debug(rpx: RPL, specialSections: boolean | SpecialSections
                     perf = performance.now();
                     const crcs = section.crcs;
                     logperf('Computed RPLCrcSection.crcs in', perf);
-                    await Bun.write(Bun.stdout, '        ');
+                    await Util.write(Util.stdout, '        ');
                     for (let i = 0; i < crcs.length; i++) {
-                        await Bun.write(Bun.stdout, crcs[i]!.toString(16).toUpperCase().padStart(8, '0') + '    ');
-                        if ((i + 1) % 10 === 0) await Bun.write(Bun.stdout, '\n        ');
+                        await Util.write(Util.stdout, crcs[i]!.toString(16).toUpperCase().padStart(8, '0') + '    ');
+                        if ((i + 1) % 10 === 0) await Util.write(Util.stdout, '\n        ');
                     }
-                    await Bun.write(Bun.stdout, '\n\n');
+                    await Util.write(Util.stdout, '\n\n');
                     break;
                 }
                 case SectionType.RPLFileInfo: {

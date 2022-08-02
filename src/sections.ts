@@ -6,6 +6,7 @@ import { RPL } from './rpl';
 import { StringStore } from './stringstore';
 import { Structs } from './structs';
 import { ELFSymbol } from './symbol';
+import Util from './util';
 
 export class Section extends Structs.Section {
     constructor(inputdata: DataWrapper | Structs.RawSectionValues & { data?: Uint8Array | null }, rpx: RPL) {
@@ -51,7 +52,7 @@ export class Section extends Structs.Section {
         if (this.type !== SectionType.NoBits && this.type !== SectionType.Null && +this.storedOffset !== 0) {
             if (<number>this.flags & SectionFlags.Compressed) {
                 // Decompress section data
-                const decompressed = Bun.gunzipSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
+                const decompressed = Util.gunzipSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
                 //(<number>this.flags) &= ~SectionFlags.Compressed;
                 this.#data = decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength);
             } else {
@@ -105,7 +106,7 @@ export class Section extends Structs.Section {
     }
 
     get crc32Hash(): uint32 {
-        return new uint32(this.hasData ? Number(Bun.hash.crc32(this.data!)) : 0x00000000);
+        return new uint32(this.hasData ? Number(Util.crc32(this.data!)) : 0x00000000);
     }
     
     get data(): Uint8Array | null {
@@ -174,7 +175,7 @@ export class SymbolSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(Bun.allocUnsafe(<number>this.entSize * this.symbols.length));
+        const buffer = new DataWrapper(Util.allocUnsafe(<number>this.entSize * this.symbols.length));
         for (const sym of this.symbols) {
             buffer.dropUint32(sym.nameOffset);
             buffer.dropUint32(sym.value);
@@ -224,7 +225,7 @@ export class RelocationSection extends Section {
     }
     override get data(): ReadonlyDataWrapper {
         if (!this.#parsed) return new ReadonlyDataWrapper(super.data!);
-        const buffer = new DataWrapper(Bun.allocUnsafe(<number>this.entSize * this.relocations.length));
+        const buffer = new DataWrapper(Util.allocUnsafe(<number>this.entSize * this.relocations.length));
         for (const reloc of this.relocations) {
             buffer.dropUint32(reloc.addr);
             buffer.dropUint32(reloc.info);
@@ -324,7 +325,7 @@ export class RPLFileInfoSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(Bun.allocUnsafe(0x60));
+        const buffer = new DataWrapper(Util.allocUnsafe(0x60));
         buffer.dropUint16(this.fileinfo.magic);
         buffer.dropUint16(this.fileinfo.version);
         buffer.dropUint32(this.fileinfo.textSize);
