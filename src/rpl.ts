@@ -1,27 +1,46 @@
 import fs from 'fs';
-import { DataWrapper } from './datawrapper';
+import zlibng from './zlibng';
+import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { Header } from './header';
-import { uint16 } from './primitives';
+import { sint32, uint16, uint32, ZlibCompressionLevel } from './primitives';
 import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
 
+interface RPLSaveOptions {
+    /** Ignore `Compressed` flags and just try
+     *  to compress all compressable sections.
+     * 
+     * A value of `false` for `compression` parameter has higher priority than this. */
+    compressAsPossible?: boolean;
+    /** Bypass the check for inefficient compression where a section will not be
+     * compressed if its compressed data is bigger than the uncompressed data. */
+    bypassCompressionSizeCheck?: boolean;
+}
+
+interface RPLParseOptions {
+    /** @warning Makes parsing and saving **VERY SLOW** */
+    parseRelocs?: boolean;
+}
+
 export class RPL extends Header {
-    constructor(data: TypedArray) {
+    constructor(data: TypedArray, opts: RPLParseOptions = {}) {
         const file = new DataWrapper(data);
         super(file);
+
+        opts.parseRelocs ??= false;
 
         this.#sections = new Array(<number>this._sectionHeadersEntryCount) as Section[];
         file.pos = +this.sectionHeadersOffset;
 
         for (let i = 0; i < this._sectionHeadersEntryCount; i++) {
             file.pos += 4;
-            const sectionType: SectionType = file.passUint32() as SectionType;
+            const sectionType: SectionType = +file.passUint32();
             file.pos -= 8;
             switch (sectionType) {
                 case SectionType.StrTab:      this.#sections[i] = new StringSection(file, this); break;
                 case SectionType.SymTab:      this.#sections[i] = new SymbolSection(file, this); break;
                 case SectionType.Rel:         //! fallthrough
-                case SectionType.Rela:        this.#sections[i] = new RelocationSection(file, this); break;
+                case SectionType.Rela:        this.#sections[i] = new RelocationSection(file, this, opts.parseRelocs); break;
                 case SectionType.RPLCrcs:     this.#sections[i] = new RPLCrcSection(file, this); break;
                 case SectionType.RPLFileInfo: this.#sections[i] = new RPLFileInfoSection(file, this); break;
                 default:
@@ -35,9 +54,12 @@ export class RPL extends Header {
     /**
      * Saves the RPL/RPX to a file.
      * @param compression The compression level to use on sections with the `Compressed` flag enabled.
-     * `true` uses the default level (`-1`). `false` disables compression (default).
+     * - `false` disables compression (default).
+     * - `true` uses the level in the RPL File Info section or `-1` if there isn't one.
+     * - `-1` uses the default zlib compression level of `6`.
+     * - `0` disables compression but still wraps the data in a zlib header and footer.
      */
-    save(path: string, compression: boolean | -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 = false): void {
+    save(path: string, compression: boolean | ZlibCompressionLevel = false, options?: RPLSaveOptions): void {
         const headers = new DataWrapper(Bun.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
@@ -61,18 +83,62 @@ export class RPL extends Header {
         headers.dropUint16(this.shstrIndex);
         headers.zerofill(<number>this.sectionHeadersOffset - <number>this.headerSize); //? padding
 
-        let totalSectionSizes = 0;
+        const fileinfoSection = (<RPLFileInfoSection>this.#sections.find(s => s instanceof RPLFileInfoSection));
+        if (compression === true) compression = <ZlibCompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
+        else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? -1 : compression);
+
+        let currOffset = <number>this.sectionHeadersOffset + <number>this.sectionHeadersEntrySize * this.#sections.length;
+        const datasink = new Bun.ArrayBufferSink();
         for (let i = 0; i < this.#sections.length; i++) {
             const section = this.#sections[i];
-            const sectionSize = section.size;
-            if (section.hasData) totalSectionSizes += <number>sectionSize;
-            // Saving without compression, disable all Compressed flags
-            if (compression === false && <number>section.flags & SectionFlags.Compressed) (<number>section.flags) &= ~SectionFlags.Compressed;
+            const sectionOffset: number = section.hasData ? currOffset : 0;
+            let sectionSize: number | uint32;
+
+            if (compression === false) {
+                (<number>section.flags) &= ~SectionFlags.Compressed;
+                sectionSize = section.size;
+                if (section.hasData) {
+                    currOffset += <number>sectionSize;
+                    datasink.write(section.data!);
+                }
+            } else {
+                if (<number>section.flags & SectionFlags.Compressed) {
+                    if (!section.hasData) {
+                        sectionSize = section.size;
+                    } else if (+section.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) {
+                        sectionSize = section.size;
+                        currOffset += <number>sectionSize;
+                        datasink.write(section.data!);
+                    } else {
+                        const data = section.data!;
+                        const uncompressed = data instanceof ReadonlyDataWrapper ? new Uint8Array(data['@@arraybuffer']) : data;
+                        const compressed = Buffer.concat([Bun.allocUnsafe(4), zlibng.deflateSync(uncompressed, { level: compression, /*windowBits: -15, memLevel: 9*/ })]);
+                        compressed.writeUint32BE(uncompressed.byteLength, 0);
+                        if (compressed.byteLength >= uncompressed.byteLength) {
+                            sectionSize = uncompressed.byteLength;
+                            currOffset += <number>sectionSize;
+                            datasink.write(uncompressed);
+                        } else {
+                            const compressedBuf = compressed.subarray(compressed.byteOffset, compressed.byteOffset + compressed.byteLength);
+                            sectionSize = compressedBuf.byteLength;
+                            currOffset += <number>sectionSize;
+                            datasink.write(compressedBuf);
+                        }
+                    }
+                } else {
+                    sectionSize = section.size;
+                    if (section.hasData) {
+                        currOffset += <number>sectionSize;
+                        datasink.write(section.data!);
+                    }
+                }
+            }
+
             headers.dropUint32(section.nameOffset);
             headers.dropUint32(section.type);
             headers.dropUint32(section.flags);
             headers.dropUint32(section.addr);
-            headers.dropUint32(section.offset);
+            headers.dropUint32(sectionOffset);
             headers.dropUint32(sectionSize);
             headers.dropUint32(section.link);
             headers.dropUint32(section.info);
@@ -80,7 +146,7 @@ export class RPL extends Header {
             headers.dropUint32(section.entSize);
         }
 
-        let crcsPos = 0;
+        /*let crcsPos = 0;
         let crcs: number[] = [];
         const sectionsData = new DataWrapper(Bun.allocUnsafe(totalSectionSizes));
         for (let i = 0; i < this.#sections.length; i++) {
@@ -105,9 +171,10 @@ export class RPL extends Header {
                 continue;
             }
 
-            const data = section.data!;
+            const uncompressedData = section.data!;
+            const data = compressedDatas[i] ?? uncompressedData;
             sectionsData.drop(data);
-            const crc = Number(Bun.hash.crc32(data));
+            const crc = Number(Bun.hash.crc32(uncompressedData));
             crcs[ix  ] = crc >> 24 & 0xFF;
             crcs[ix+1] = crc >> 16 & 0xFF;
             crcs[ix+2] = crc >>  8 & 0xFF;
@@ -119,9 +186,9 @@ export class RPL extends Header {
             sectionsData.pos = crcsPos;
             sectionsData.drop(crcs);
             sectionsData.pos = endPos;
-        }
+        }*/
 
-        const file = Buffer.concat([headers, sectionsData]);
+        const file = Buffer.concat([headers, new Uint8Array(datasink.end())]);
         fs.writeFileSync(path, file);
     }
 
