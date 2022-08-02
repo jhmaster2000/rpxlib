@@ -8,14 +8,12 @@ import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSe
 import Util from './util';
 
 interface RPLSaveOptions {
-    /** Ignore `Compressed` flags and just try
-     *  to compress all compressable sections.
+    /** Ignore `Compressed` flags and just try to compress all compressable sections.
+     * 
+     * This is useful for compressing ELF files back to RPX/RPL without manually selecting sections to compress.
      * 
      * A value of `false` for `compression` parameter has higher priority than this. */
     compressAsPossible?: boolean;
-    /** Bypass the check for inefficient compression where a section will not be
-     * compressed if its compressed data is bigger than the uncompressed data. */
-    bypassCompressionSizeCheck?: boolean;
 }
 
 interface RPLParseOptions {
@@ -60,7 +58,7 @@ export class RPL extends Header {
      * - `-1` uses the default zlib compression level of `6`.
      * - `0` disables compression but still wraps the data in a zlib header and footer.
      */
-    save(path: string, compression: boolean | zlibng.CompressionLevel = false, options?: RPLSaveOptions): void {
+    save(path: string, compression: boolean | zlibng.CompressionLevel = false, options: RPLSaveOptions = {}): void {
         const headers = new DataWrapper(Util.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
@@ -88,49 +86,89 @@ export class RPL extends Header {
         if (compression === true) compression = <zlibng.CompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
         else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? -1 : compression);
 
+        options.compressAsPossible ??= false;
+
+        let crcsOffset = 0;
+        let crcs: number[] = [];
         let currOffset = <number>this.sectionHeadersOffset + <number>this.sectionHeadersEntrySize * this.#sections.length;
         const datasink = new Util.ArrayBufferSink();
+
+        /** If uncompressedData is `true`, the section is considered the RPLCrcSection */
+        const writeSectionDataAndCRC = (i: number, offset: number, uncompressedData: Uint8Array | true, compressedData?: Uint8Array): void => {
+            if (uncompressedData === true) {
+                crcsOffset = offset;
+                const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
+                datasink.write(new Uint8Array(this.#sections.length * 4 /* Section.entSize */));
+            } else {
+                datasink.write(compressedData ?? uncompressedData);
+                const ix = i * 4;
+                const crc = Util.crc32(uncompressedData);
+                crcs[ix  ] = crc >> 24 & 0xFF;
+                crcs[ix+1] = crc >> 16 & 0xFF;
+                crcs[ix+2] = crc >>  8 & 0xFF;
+                crcs[ix+3] = crc       & 0xFF;
+            }
+        };
+
         for (let i = 0; i < this.#sections.length; i++) {
             const section = this.#sections[i];
             const sectionOffset: number = section.hasData ? currOffset : 0;
             let sectionSize: number | uint32;
 
-            if (compression === false) {
+            const isCRCSection = +section.type === SectionType.RPLCrcs;
+            if (compression === false) { // Saving file with no compression (ELF)
                 (<number>section.flags) &= ~SectionFlags.Compressed;
                 sectionSize = section.size;
                 if (section.hasData) {
                     currOffset += <number>sectionSize;
-                    datasink.write(section.data!);
-                }
-            } else {
-                if (<number>section.flags & SectionFlags.Compressed) {
+                    writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
+                } else { const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00; }
+            }
+            else { // Saving file with compression (RPL/RPX)
+                if (<number>section.flags & SectionFlags.Compressed || options.compressAsPossible) { // Saving compressed section
                     if (!section.hasData) {
+                        (<number>section.flags) &= ~SectionFlags.Compressed;
                         sectionSize = section.size;
-                    } else if (+section.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) {
+                        const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
+                        if (!options.compressAsPossible) console.warn(
+                            `[!] Saving section #${i} which has no data and has been marked as compressed.\n` +
+                            `    This is likely a mistake and the section has been unmarked as compressed.`
+                        );
+                    } else if (isCRCSection || +section.type === SectionType.RPLFileInfo) {
+                        (<number>section.flags) &= ~SectionFlags.Compressed;
                         sectionSize = section.size;
                         currOffset += <number>sectionSize;
-                        datasink.write(section.data!);
+                        writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
+                        if (!options.compressAsPossible) console.warn(
+                            `[!] Saving RPL CRCs or File Info section which has been marked as compressed, this is likely a mistake.\n` +
+                            `    These sections cannot be compressed and have been saved as uncompressed instead.`
+                        );
                     } else {
                         const data = section.data!;
                         const uncompressed = data instanceof ReadonlyDataWrapper ? new Uint8Array(data['@@arraybuffer']) : data;
-                        const compressed = Buffer.concat([Util.allocUnsafe(4), zlibng.deflateSync(uncompressed, { level: compression, /*windowBits: -15, memLevel: 9*/ })]);
+                        const compressed = Buffer.concat([ Util.allocUnsafe(4), zlibng.deflateSync(uncompressed, { level: compression }) ]);
                         compressed.writeUint32BE(uncompressed.byteLength, 0);
-                        if (compressed.byteLength >= uncompressed.byteLength) {
+
+                        if (compression !== 0 && compressed.byteLength >= uncompressed.byteLength) {
+                            (<number>section.flags) &= ~SectionFlags.Compressed;
                             sectionSize = uncompressed.byteLength;
                             currOffset += <number>sectionSize;
-                            datasink.write(uncompressed);
+                            writeSectionDataAndCRC(i, sectionOffset, uncompressed);
+                            if (!options.compressAsPossible) console.warn(
+                                `[!] Saving section #${i} which has been marked as compressed as uncompressed,\n` +
+                                `    due to the compression making it larger than uncompressed.`
+                            );
                         } else {
-                            const compressedBuf = compressed.subarray(compressed.byteOffset, compressed.byteOffset + compressed.byteLength);
-                            sectionSize = compressedBuf.byteLength;
+                            sectionSize = compressed.byteLength;
                             currOffset += <number>sectionSize;
-                            datasink.write(compressedBuf);
+                            writeSectionDataAndCRC(i, sectionOffset, uncompressed, compressed); // Proper compressed section saving
                         }
                     }
-                } else {
+                } else { // Saving uncompressed section
                     sectionSize = section.size;
                     if (section.hasData) {
                         currOffset += <number>sectionSize;
-                        datasink.write(section.data!);
+                        writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
                     }
                 }
             }
@@ -147,49 +185,9 @@ export class RPL extends Header {
             headers.dropUint32(section.entSize);
         }
 
-        /*let crcsPos = 0;
-        let crcs: number[] = [];
-        const sectionsData = new DataWrapper(Util.allocUnsafe(totalSectionSizes));
-        for (let i = 0; i < this.#sections.length; i++) {
-            const section = this.#sections[i];
-            const ix = i * 4;
-
-            if (!section.hasData) {
-                crcs[ix  ] = 0x00;
-                crcs[ix+1] = 0x00;
-                crcs[ix+2] = 0x00;
-                crcs[ix+3] = 0x00;
-                continue;
-            }
-
-            if (section instanceof RPLCrcSection) {
-                crcsPos = sectionsData.pos;
-                crcs[ix  ] = 0x00;
-                crcs[ix+1] = 0x00;
-                crcs[ix+2] = 0x00;
-                crcs[ix+3] = 0x00;
-                sectionsData.pos += this.#sections.length * <number>section.entSize;
-                continue;
-            }
-
-            const uncompressedData = section.data!;
-            const data = compressedDatas[i] ?? uncompressedData;
-            sectionsData.drop(data);
-            const crc = Number(Util.crc32(uncompressedData));
-            crcs[ix  ] = crc >> 24 & 0xFF;
-            crcs[ix+1] = crc >> 16 & 0xFF;
-            crcs[ix+2] = crc >>  8 & 0xFF;
-            crcs[ix+3] = crc       & 0xFF;
-        }
-
-        if (crcsPos !== 0) {
-            const endPos = sectionsData.pos;
-            sectionsData.pos = crcsPos;
-            sectionsData.drop(crcs);
-            sectionsData.pos = endPos;
-        }*/
-
         const file = Buffer.concat([headers, new Uint8Array(datasink.end())]);
+        if (crcsOffset !== 0) file.set(crcs, crcsOffset);
+
         fs.writeFileSync(path, file);
     }
 
