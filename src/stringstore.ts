@@ -35,7 +35,7 @@ export class StringStore {
             const keyn = +key;
             if (keyn !== keyn) continue;
             const encoded = Bun.allocUnsafe(this[key].length + 1);
-            encoder.encodeInto(this[key], encoded);
+            encoder.encodeInto(this[key] + '\0', encoded);
             buffer.set(encoded, keyn - this.#dataOffset);
         }
         return buffer;
