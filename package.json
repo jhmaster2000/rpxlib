@@ -18,7 +18,7 @@
   "scripts": {
     "start": "bun tsc && bun run src/main.ts",
     "lint": "bun eslint src/**/*.ts",
-    "lint-fix": "bun run lint -- --fix"
+    "lint-fix": "bun run --silent lint -- --fix"
   },
   "type": "module"
 }
