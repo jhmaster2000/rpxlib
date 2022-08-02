@@ -1,4 +1,3 @@
-import Bun from 'bun';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { uint32 } from './primitives';
@@ -7,14 +6,6 @@ import { RPL } from './rpl';
 import { StringStore } from './stringstore';
 import { Structs } from './structs';
 import { ELFSymbol } from './symbol';
-import zlibng from './zlibng';
-
-function inflateSync(buf: Uint8Array): Uint8Array {
-    return Bun.gunzipSync(buf);
-}
-function deflateSync(buf: Uint8Array, opts?: Bun.ZlibCompressionOptions): Uint8Array {
-    return Bun.gzipSync(buf, opts);
-}
 
 export class Section extends Structs.Section {
     constructor(inputdata: DataWrapper | Structs.RawSectionValues & { data?: Uint8Array | null }, rpx: RPL) {
@@ -60,7 +51,7 @@ export class Section extends Structs.Section {
         if (this.type !== SectionType.NoBits && this.type !== SectionType.Null && +this.storedOffset !== 0) {
             if (<number>this.flags & SectionFlags.Compressed) {
                 // Decompress section data
-                const decompressed = inflateSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
+                const decompressed = Bun.gunzipSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
                 //(<number>this.flags) &= ~SectionFlags.Compressed;
                 this.#data = decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength);
             } else {
@@ -73,33 +64,6 @@ export class Section extends Structs.Section {
     override readonly type;
     protected override readonly storedOffset;
     protected override readonly storedSize;
-
-    /** Safely attempts to provide the section data compressed.
-     * 
-     * **Does NOT mutate the Section instance in any way:**
-     * - The Section instance `data` property will **NOT** be modified and remain the uncompressed data.
-     * - It is enforced that `Section.data` is always **NOT** compressed for functionality and simplicity.
-     * - This function will **NOT** enable the `Compressed` flag in the Section instance `Section.flags`
-     * property, instead the flag will be handled by the parent RPL/RPX (`Section.rpx`) class during save.
-     * - The `Compressed` flag is to be added/removed **by the user** to tell the library whether or not
-     * that section should be compressed on save, if compression is requested to `RPL.save()`
-     * 
-     * @returns `Uint8Array` containing the compressed data if successful.
-     * @returns `number` value of the size of the section uncompressed if the compression would make it larger than uncompressed.
-     * @returns `0` if the section is not compressable.
-     */
-    tryCompress(compressionLevel?: zlibng.CompressionLevel): Uint8Array | number {
-        // NOTE: Another instance of hardcoding NoBits size retrieval
-        if (!this.hasData) return +this.type === SectionType.NoBits ? +this.storedSize : 0;
-        if (+this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return +this.size;
-
-        const uncompressed = this.data!;
-        const compressed = Buffer.concat([Bun.allocUnsafe(4), deflateSync(uncompressed, { level: compressionLevel })]);
-        compressed.writeUint32BE(uncompressed.byteLength, 0);
-        if (compressed.byteLength >= uncompressed.byteLength) return uncompressed.byteLength;
-        ////(<number>this.flags) |= SectionFlags.Compressed;
-        return compressed.subarray(compressed.byteOffset, compressed.byteOffset + compressed.byteLength);
-    }
 
     get index(): number {
         return this.rpx.sections.indexOf(this);
