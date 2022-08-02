@@ -1,7 +1,7 @@
 import Bun from 'bun';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
-import { uint32 } from './primitives';
+import { uint32, ZlibCompressionLevel } from './primitives';
 import { Relocation } from './relocation';
 import { RPL } from './rpl';
 import { StringStore } from './stringstore';
@@ -84,15 +84,19 @@ export class Section extends Structs.Section {
      * that section should be compressed on save, if compression is requested to `RPL.save()`
      * 
      * @returns `Uint8Array` containing the compressed data if successful.
-     * @returns `false` if the section is not compressable or if the compression would make it larger than uncompressed.
+     * @returns `number` value of the size of the section uncompressed if the compression would make it larger than uncompressed.
+     * @returns `0` if the section is not compressable.
      */
-    tryCompress(compressionLevel?: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): Uint8Array | false {
-        if (!this.hasData || +this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return false;
+    tryCompress(compressionLevel?: ZlibCompressionLevel): Uint8Array | number {
+        // NOTE: Another instance of hardcoding NoBits size retrieval
+        if (!this.hasData) return +this.type === SectionType.NoBits ? +this.storedSize : 0;
+        if (+this.type === SectionType.RPLCrcs || +this.type === SectionType.RPLFileInfo) return +this.size;
 
-        const compressed = Buffer.concat([Bun.allocUnsafe(4), deflateSync(this.data!, { level: compressionLevel })]);
-        compressed.writeUint32BE(+this.size, 0);
-        if (compressed.byteLength >= this.size) return false;
-        //(<number>this.flags) |= SectionFlags.Compressed;
+        const uncompressed = this.data!;
+        const compressed = Buffer.concat([Bun.allocUnsafe(4), deflateSync(uncompressed, { level: compressionLevel })]);
+        compressed.writeUint32BE(uncompressed.byteLength, 0);
+        if (compressed.byteLength >= uncompressed.byteLength) return uncompressed.byteLength;
+        ////(<number>this.flags) |= SectionFlags.Compressed;
         return compressed.subarray(compressed.byteOffset, compressed.byteOffset + compressed.byteLength);
     }
 
@@ -116,16 +120,18 @@ export class Section extends Structs.Section {
         const idx = sections.indexOf(this);
         if (idx === 0) {
             const off = <number>this.rpx.sectionHeadersOffset + <number>this.rpx.sectionHeadersEntrySize * this.rpx.sections.length;
-            //return new uint32(off + off % 2);
+            ////return new uint32(off + off % 2);
             return new uint32(off);
         }
         const prevSect = sections[idx - 1]!;
         const off = <number>prevSect.offset + <number>prevSect.size;
-        //return new uint32(off + off % 2);
+        ////return new uint32(off + off % 2);
         return new uint32(off);
     }
 
     get size(): uint32 {
+        // NOTE: NoBits size hardcoding makes it annoying to change .bss sizes if ever needed.
+        // (Currently, the entire NoBits section instance will need to be recreated and replaced)
         return new uint32(this.data?.byteLength ?? (+this.type === SectionType.NoBits ? <number>this.storedSize : 0));
     }
 
@@ -173,7 +179,6 @@ export class StringSection extends Section {
     override get hasData(): true {
         return true;
     }
-
     override get size(): uint32 {
         return new uint32(this.strings.size);
     }
@@ -218,7 +223,6 @@ export class SymbolSection extends Section {
     override get hasData(): true {
         return true;
     }
-
     override get size(): uint32 {
         return new uint32(<number>this.entSize * this.symbols.length);
     }
@@ -227,12 +231,15 @@ export class SymbolSection extends Section {
 }
 
 export class RelocationSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { relocations?: Relocation[] }, rpx: RPL) {
+    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { relocations?: Relocation[] }, rpx: RPL, parseRelocs = false) {
         super(inputdata, rpx);
         if (!(inputdata instanceof DataWrapper)) {
             return this; // TODO
         }
         if (!super.hasData) throw new Error('Relocation section cannot be empty.');
+        if (!parseRelocs) return this;
+        else this.#parsed = true;
+
         const data = new DataWrapper(super.data!);
         const num = super.data!.byteLength / (<number>this.entSize);
 
@@ -246,7 +253,12 @@ export class RelocationSection extends Section {
         }
     }
 
+    override set data(value: Uint8Array) {
+        if (this.#parsed) throw new Error('Cannot directly modify data of parsed relocation section.');
+        else super.data = value;
+    }
     override get data(): ReadonlyDataWrapper {
+        if (!this.#parsed) return new ReadonlyDataWrapper(super.data!);
         const buffer = new DataWrapper(Bun.allocUnsafe(<number>this.entSize * this.relocations.length));
         for (const reloc of this.relocations) {
             buffer.dropUint32(reloc.addr);
@@ -258,11 +270,11 @@ export class RelocationSection extends Section {
     override get hasData(): true {
         return true;
     }
-
     override get size(): uint32 {
-        return new uint32(<number>this.entSize * this.relocations.length);
+        return new uint32(this.#parsed ? <number>this.entSize * this.relocations.length : super.data!.byteLength);
     }
 
+    #parsed: boolean = false;
     relocations: Relocation[] = [];
 }
 
@@ -278,11 +290,9 @@ export class RPLCrcSection extends Section {
     override get hasData(): true {
         return true;
     }
-
     override get size(): uint32 {
         return new uint32(this.rpx.sections.length * <number>this.entSize);
     }
-
     override get crc32Hash(): uint32 {
         return new uint32(0);
     }
@@ -381,7 +391,6 @@ export class RPLFileInfoSection extends Section {
     override get hasData(): true {
         return true;
     }
-
     override get size(): uint32 {
         return new uint32(0x60 + this.strings.size);
     }
