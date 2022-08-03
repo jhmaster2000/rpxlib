@@ -98,7 +98,7 @@ export class RPL extends Header {
             if (uncompressedData === true) {
                 crcsOffset = offset;
                 const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
-                datasink.write(new Uint8Array(this.#sections.length * 4 /* Section.entSize */));
+                datasink.write(Bun.allocUnsafe(this.#sections.length * 4 /* Section.entSize */));
             } else {
                 datasink.write(compressedData ?? uncompressedData);
                 const ix = i * 4;
