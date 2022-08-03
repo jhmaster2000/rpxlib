@@ -16,7 +16,8 @@ console.timeEnd('parse file');
 //console.timeEnd('debug file');
 
 console.time('save file');
-rpx.save('output.elf');
+const savedTo = rpx.save('output2');
+console.log(`Saved file to: ${savedTo}`);
 console.timeEnd('save file');
 
 //const RPX_PATH2 = './output.rpx';
