@@ -9,18 +9,18 @@ import { ELFSymbol } from './symbol';
 import Util from './util';
 
 export class Section extends Structs.Section {
-    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { data?: Uint8Array | null }, rpx: RPL) {
+    constructor(inputdata: DataWrapper | Structs.SectionValues & { data?: Uint8Array | null }, rpx: RPL) {
         super();
         this.rpx = rpx;
         if (!(inputdata instanceof DataWrapper)) {
-            this.nameOffset = inputdata.nameOffset;
+            this.nameOffset = new uint32(inputdata.nameOffset);
             this.type = new uint32(inputdata.type) as SectionType;
-            this.flags = inputdata.flags;
-            this.addr = inputdata.addr;
-            this.link = inputdata.link;
-            this.info = inputdata.info;
-            this.addrAlign = inputdata.addrAlign;
-            this.entSize = inputdata.entSize;
+            this.flags = new uint32(inputdata.flags);
+            this.addr = new uint32(inputdata.addr);
+            this.link = new uint32(inputdata.link);
+            this.info = new uint32(inputdata.info);
+            this.addrAlign = new uint32(inputdata.addrAlign);
+            this.entSize = new uint32(inputdata.entSize);
             this.storedOffset = new uint32(0);
             this.storedSize = new uint32(0);
             const sectionType = +inputdata.type;
@@ -53,7 +53,6 @@ export class Section extends Structs.Section {
             if (<number>this.flags & SectionFlags.Compressed) {
                 // Decompress section data
                 const decompressed = Util.gunzipSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
-                //(<number>this.flags) &= ~SectionFlags.Compressed;
                 this.#data = decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength);
             } else {
                 // Section is not compressed
@@ -127,7 +126,7 @@ export class Section extends Structs.Section {
 }
 
 export class StringSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { strings?: Record<number, string> }, rpx: RPL) {
+    constructor(inputdata: DataWrapper | Structs.SectionValues & { strings?: Record<number, string> }, rpx: RPL) {
         super(inputdata, rpx);
         if (!(inputdata instanceof DataWrapper)) {
             this.strings = new StringStore();
@@ -151,7 +150,7 @@ export class StringSection extends Section {
 }
 
 export class SymbolSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { symbols?: ELFSymbol[] }, rpx: RPL) {
+    constructor(inputdata: DataWrapper | Structs.SectionValues & { symbols?: ELFSymbol[] }, rpx: RPL) {
         super(inputdata, rpx);
         if (!(inputdata instanceof DataWrapper)) {
             return this; // TODO
@@ -195,7 +194,7 @@ export class SymbolSection extends Section {
 }
 
 export class RelocationSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { relocations?: Relocation[] }, rpx: RPL, parseRelocs = false) {
+    constructor(inputdata: DataWrapper | Structs.SectionValues & { relocations?: Relocation[] }, rpx: RPL, parseRelocs = false) {
         super(inputdata, rpx);
         if (!(inputdata instanceof DataWrapper)) {
             return this; // TODO
@@ -271,7 +270,7 @@ export class RPLCrcSection extends Section {
 }
 
 export class RPLFileInfoSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.RawSectionValues & { fileinfo?: Structs.RPLFileInfo }, rpx: RPL) {
+    constructor(inputdata: DataWrapper | Structs.SectionValues & { fileinfo?: Structs.RPLFileInfo }, rpx: RPL) {
         super(inputdata, rpx);
         if (!(inputdata instanceof DataWrapper)) {
             this.strings = new StringStore();
