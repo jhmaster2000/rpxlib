@@ -15,8 +15,13 @@ console.timeEnd('parse file');
 //await debug(rpx, { rplfileinfo: true });
 //console.timeEnd('debug file');
 
+const rplcrcsStrAddr = rpx.shstrSection.strings.add('.rplcrcs');
+const rplfileinfoStrAddr = rpx.shstrSection.strings.add('.rplfileinfo');
+rpx.crcSection.nameOffset = rplcrcsStrAddr;
+rpx.fileinfoSection.nameOffset = rplfileinfoStrAddr;
+
 console.time('save file');
-const savedTo = rpx.save('output2');
+const savedTo = rpx.save('output3');
 console.log(`Saved file to: ${savedTo}`);
 console.timeEnd('save file');
 

@@ -208,4 +208,10 @@ export class RPL extends Header {
             throw new TypeError(`Cannot assign shstrIndex, Section at index ${(<number>index)} is not a string table or doesn't exist.`);
         }
     }
+
+    // Helper methods
+
+    get shstrSection(): StringSection { return this.#sections[+this._shstrIndex] as StringSection; }
+    get crcSection(): RPLCrcSection { return this.#sections.at(-2)! as RPLCrcSection; }
+    get fileinfoSection(): RPLFileInfoSection { return this.#sections.at(-1)! as RPLFileInfoSection; }
 }
