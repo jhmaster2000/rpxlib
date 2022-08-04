@@ -5,6 +5,7 @@ import { SectionFlags, SectionType } from './enums';
 import { Header } from './header';
 import { sint32, uint16, uint32 } from './primitives';
 import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
+import { Structs } from './structs';
 import Util from './util';
 
 interface RPLSaveOptions {
@@ -214,4 +215,45 @@ export class RPL extends Header {
     get shstrSection(): StringSection { return this.#sections[+this._shstrIndex] as StringSection; }
     get crcSection(): RPLCrcSection { return this.#sections.at(-2)! as RPLCrcSection; }
     get fileinfoSection(): RPLFileInfoSection { return this.#sections.at(-1)! as RPLFileInfoSection; }
+
+    get addressRanges() {
+        const ceilToNearest = (n: number, multiple: number): number => Math.ceil(n / multiple) * multiple;
+        let used: [number, number][] = [];
+        this.#sections.forEach(section => {
+            if (+section.addr === 0) return;
+            used.push([+section.addr, ceilToNearest(+section.addr + +section.size, +section.addrAlign)]);
+        });
+        used.sort((a, b) => a[0] - b[0]);
+
+        let last = 0;
+        let free: [number, number][] = [];
+        used.forEach(([start, end], i) => {
+            if (last > start) { last = start; used[i-1][1] = last; }
+            if (last === start) return last = end;
+            if (start - 1 - last < 0x40) return last = end;
+            free.push([last, start - 1]);
+            return last = end;
+        });
+        free.push([last, 0xFFFFFFFF]);
+
+        return { free, used, print() {
+            const freeFmt = this.free.map(([x, y]) => [x, '\x1B[32;1m' + [
+                x.toString(16).toUpperCase().padStart(8, '0'),
+                y.toString(16).toUpperCase().padStart(8, '0')
+            ].join(' -> ') + '\x1B[0m'] as const);
+            const occupiedFmt = this.used.map(([x, y]) => [x, '\x1B[31;1m' + [
+                x.toString(16).toUpperCase().padStart(8, '0'),
+                y.toString(16).toUpperCase().padStart(8, '0')
+            ].join(' -> ') + '\x1B[0m'] as const);
+            console.log([...freeFmt, ...occupiedFmt].sort((a, b) => a[0] - b[0]).map(x => x[1]).join('\n'));
+        } };
+    }
+
+    pushSection(values: Structs.SectionValues) {
+        const section = new Section(values, this);
+        const fileinfo = this.#sections.pop()!;
+        const crcs = this.#sections.pop()!;
+        this.#sections.push(section, crcs, fileinfo);
+        return section;
+    }
 }
