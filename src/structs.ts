@@ -41,7 +41,7 @@ export namespace Structs {
         public    entSize: uint32 = new uint32;       //! uint32
     }
 
-    export type RawSectionValues = { [K in keyof Section]: Section[K] };
+    export type SectionValues = { [K in keyof Section]: Section[K] };
 
     export class Symbol {
         /** Offset from the start of the {@link Section.link linked string table section} of 
