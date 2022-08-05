@@ -22,6 +22,8 @@ namespace Util {
         return Bun.gunzipSync(data);
     }
 
+    export const roundUp = (n: number, multiple: number): number => Math.ceil(n / multiple) * multiple;
+
     export const ArrayBufferSink = Bun.ArrayBufferSink;
 
     export const stdout = Bun.stdout;
