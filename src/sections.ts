@@ -358,6 +358,46 @@ export class RPLFileInfoSection extends Section {
         return new uint32(0x60 + this.strings.size);
     }
 
+    /** These are not the actual sizes stored on the section,
+     *  but rather the ideal calculated values for each of them.
+     *  @see `RPLFileInfoSection.adjustFileInfoSizes()` */
+    get fileinfoSizes() {
+        const CodeBaseAddress = 0x02000000 as const;
+        const DataBaseAddress = 0x10000000 as const;
+        const LoadBaseAddress = 0xC0000000 as const;
+        const info = { textSize: 0, dataSize: 0, loadSize: 0, tempSize: 0 };
+
+        for (const section of this.rpx.sections) {
+            let size = +section.size;
+            if (section.addr >= CodeBaseAddress && section.addr < DataBaseAddress) {
+                const val = +section.addr + +section.size - CodeBaseAddress;
+                if (val > info.textSize) info.textSize = val;
+            } else if (section.addr >= DataBaseAddress && section.addr < LoadBaseAddress) {
+                const val = +section.addr + +section.size - DataBaseAddress;
+                if (val > info.dataSize) info.dataSize = val;
+            } else if (section.addr >= LoadBaseAddress) {
+                const val = +section.addr + +section.size - LoadBaseAddress;
+                if (val > info.loadSize) info.loadSize = val;
+            } else if (+section.addr === 0 && +section.type !== SectionType.RPLCrcs && +section.type !== SectionType.RPLFileInfo) {
+                info.tempSize += size + 0x80;
+            }
+        }
+        const { textAlign, dataAlign, loadAlign } = this.fileinfo;
+        info.textSize = Util.roundUp(info.textSize, +textAlign);
+        info.dataSize = Util.roundUp(info.dataSize, +dataAlign);
+        info.loadSize = Util.roundUp(info.loadSize, +loadAlign);
+        return info;
+    }
+
+    /** Set the stored text, data, load and temp sizes to their ideal values. */
+    adjustFileInfoSizes(): void {
+        const { textSize, dataSize, loadSize, tempSize } = this.fileinfoSizes;
+        this.fileinfo.textSize = new uint32(textSize);
+        this.fileinfo.dataSize = new uint32(dataSize);
+        this.fileinfo.loadSize = new uint32(loadSize);
+        this.fileinfo.tempSize = new uint32(tempSize);
+    }
+
     readonly fileinfo: Structs.RPLFileInfo = new Structs.RPLFileInfo;
     /** Array of null-terminated strings until the end of the section */
     readonly strings: StringStore;
