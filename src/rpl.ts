@@ -217,11 +217,10 @@ export class RPL extends Header {
     get fileinfoSection(): RPLFileInfoSection { return this.#sections.at(-1)! as RPLFileInfoSection; }
 
     get addressRanges() {
-        const ceilToNearest = (n: number, multiple: number): number => Math.ceil(n / multiple) * multiple;
         let used: [number, number][] = [];
         this.#sections.forEach(section => {
             if (+section.addr === 0) return;
-            used.push([+section.addr, ceilToNearest(+section.addr + +section.size, +section.addrAlign)]);
+            used.push([+section.addr, Util.roundUp(+section.addr + +section.size, +section.addrAlign)]);
         });
         used.sort((a, b) => a[0] - b[0]);
 
