@@ -206,15 +206,16 @@ export async function debug(rpx: RPL, specialSections: boolean | SpecialSections
                     logperf('Traversed SymbolSection.symbols in', perf);
                     break;
                 }
+                case SectionType.Rel: //! fallthrough
                 case SectionType.Rela: {
                     if (typeof specialSections !== 'boolean' && !specialSections.relocations) break;
                     const section = rpx.sections[i] as RelocationSection;
-                    console.log(`    Section #${i} - Relocations with addends:`);
+                    console.log(`    Section #${i} - Relocations${+section.type === SectionType.Rela ? ' with addends' : ''}:`);
                     console.log('        Addr.       Addend      Info        Type  Sym.Index');
                     perf = performance.now();
                     for (const rel of section.relocations) {
                         let relstr = '        ';
-                        relstr += hex32(rel.addr) + '  ' + hexSInt(32, rel.addend!) + '  ';
+                        relstr += hex32(rel.addr) + '  ' + (+section.type === SectionType.Rela ? hexSInt(32, rel.addend!) : '   N / A  ') + '  ';
                         relstr += `${hex32(rel.info)}  ${hex8(rel.type)}  ${rel.symbolIndex}`;
                         console.log(relstr);
                     }
