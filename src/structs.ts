@@ -84,32 +84,32 @@ export namespace Structs {
     /** RPL-exclusive file information section data structure. */
     export class RPLFileInfo {
         /** Magic number of the RPL File Info section, always `0xCAFE` */
-        readonly magic: uint16 = new uint16(0xCAFE);       //? uint16
-        public   version: uint16 = new uint16;             //? uint16
-        public   textSize: uint32 = new uint32;            //* uint32
-        public   textAlign: uint32 = new uint32;           //* uint32
-        public   dataSize: uint32 = new uint32;            //* uint32
-        public   dataAlign: uint32 = new uint32;           //* uint32
-        public   loadSize: uint32 = new uint32;            //* uint32
-        public   loadAlign: uint32 = new uint32;           //* uint32
-        public   tempSize: uint32 = new uint32;            //* uint32
-        public   trampAdjust: uint32 = new uint32;         //* uint32
-        public   sdaBase: uint32 = new uint32;             //* uint32
-        public   sda2Base: uint32 = new uint32;            //* uint32
-        public   stackSize: uint32 = new uint32;           //* uint32
+        readonly magic: uint16 = new uint16(0xCAFE);        //? uint16
+        public   version: uint16 = new uint16(0x0402);      //? uint16
+        public   textSize: uint32 = new uint32;             //* uint32
+        public   textAlign: uint32 = new uint32(0x20);      //* uint32
+        public   dataSize: uint32 = new uint32;             //* uint32
+        public   dataAlign: uint32 = new uint32(0x100);     //* uint32
+        public   loadSize: uint32 = new uint32;             //* uint32
+        public   loadAlign: uint32 = new uint32(0x4);       //* uint32
+        public   tempSize: uint32 = new uint32;             //* uint32
+        public   trampAdjust: uint32 = new uint32;          //* uint32
+        public   sdaBase: uint32 = new uint32;              //* uint32
+        public   sda2Base: uint32 = new uint32;             //* uint32
+        public   stackSize: uint32 = new uint32(0x10000);   //* uint32
         /** The offset from the start of the section to the start of the strings array */
-        public   stringsOffset: uint32 = new uint32;       //* uint32
-        public   flags: uint32 = new uint32;               //* uint32
-        public   heapSize: uint32 = new uint32;            //* uint32
-        public   tagOffset: uint32 = new uint32;           //* uint32
-        public   minVersion: uint32 = new uint32;          //* uint32
-        public   compressionLevel: sint32 = new sint32;    //! sint32
-        public   trampAddition: uint32 = new uint32;       //* uint32
-        public   fileInfoPad: uint32 = new uint32;         //* uint32
-        public   cafeSdkVersion: uint32 = new uint32;      //* uint32
-        public   cafeSdkRevision: uint32 = new uint32;     //* uint32
-        public   tlsModuleIndex: uint16 = new uint16;      //? uint16
-        public   tlsAlignShift: uint16 = new uint16;       //? uint16
-        public   runtimeFileInfoSize: uint32 = new uint32; //* uint32
+        public   stringsOffset: uint32 = new uint32(0x60);  //* uint32
+        public   flags: uint32 = new uint32;                //* uint32
+        public   heapSize: uint32 = new uint32(0x8000);     //* uint32
+        public   tagOffset: uint32 = new uint32;            //* uint32
+        public   minVersion: uint32 = new uint32(0x5078);   //* uint32
+        public   compressionLevel: sint32 = new sint32(-1); //! sint32
+        public   trampAddition: uint32 = new uint32;        //* uint32
+        public   fileInfoPad: uint32 = new uint32;          //* uint32
+        public   cafeSdkVersion: uint32 = new uint32;       //* uint32
+        public   cafeSdkRevision: uint32 = new uint32;      //* uint32
+        public   tlsModuleIndex: uint16 = new uint16;       //? uint16
+        public   tlsAlignShift: uint16 = new uint16;        //? uint16
+        public   runtimeFileInfoSize: uint32 = new uint32;  //* uint32
     }
 }
