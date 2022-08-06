@@ -4,8 +4,7 @@ import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { Header } from './header';
 import { sint32, uint16, uint32 } from './primitives';
-import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
-import { Structs } from './structs';
+import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
 import Util from './util';
 
 interface RPLSaveOptions {
@@ -37,14 +36,14 @@ export class RPL extends Header {
             const sectionType: SectionType = +file.passUint32();
             file.pos -= 8;
             switch (sectionType) {
+                case SectionType.NoBits:      this.#sections[i] = new NoBitsSection(file, this); break;
                 case SectionType.StrTab:      this.#sections[i] = new StringSection(file, this); break;
                 case SectionType.SymTab:      this.#sections[i] = new SymbolSection(file, this); break;
                 case SectionType.Rel:         //! fallthrough
                 case SectionType.Rela:        this.#sections[i] = new RelocationSection(file, this, opts.parseRelocs); break;
                 case SectionType.RPLCrcs:     this.#sections[i] = new RPLCrcSection(file, this); break;
                 case SectionType.RPLFileInfo: this.#sections[i] = new RPLFileInfoSection(file, this); break;
-                default:
-                    this.#sections[i] = new Section(file, this);
+                default:                      this.#sections[i] = new Section(file, this);
             }
         }
         //! [[DISCARD this._sectionHeadersEntryCount]]
@@ -248,8 +247,7 @@ export class RPL extends Header {
         } };
     }
 
-    pushSection(values: Structs.SectionValues) {
-        const section = new Section(values, this);
+    pushSection(section: Section) {
         const fileinfo = this.#sections.pop()!;
         const crcs = this.#sections.pop()!;
         this.#sections.push(section, crcs, fileinfo);

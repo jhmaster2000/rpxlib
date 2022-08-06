@@ -1,6 +1,6 @@
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
-import { uint32 } from './primitives';
+import { CodeBaseAddress, DataBaseAddress, LoadBaseAddress, uint32 } from './primitives';
 import { Relocation } from './relocation';
 import { RPL } from './rpl';
 import { StringStore } from './stringstore';
@@ -8,11 +8,26 @@ import { Structs } from './structs';
 import { ELFSymbol } from './symbol';
 import Util from './util';
 
+const SPECIAL_SECTIONS_STRINGS: Record<number, string> = {
+    0x00000002: 'Symbol Table',
+    0x00000003: 'String Table',
+    0x00000004: 'Reloc. w/ addends',
+    0x00000008: 'No Bits',
+    0x00000009: 'Relocations',
+    0x80000003: 'RPL CRCs',
+    0x80000004: 'RPL File Info'
+};
+const SPECIAL_SECTIONS = [
+    SectionType.NoBits, SectionType.StrTab, SectionType.SymTab, SectionType.Rel, SectionType.Rela, SectionType.RPLCrcs, SectionType.RPLFileInfo
+] as const;
+
 export class Section extends Structs.Section {
     constructor(inputdata: DataWrapper | Structs.SectionValues & { data?: Uint8Array | null }, rpx: RPL) {
         super();
         this.rpx = rpx;
         if (!(inputdata instanceof DataWrapper)) {
+            if (SPECIAL_SECTIONS.includes(+inputdata.type) && !Reflect.get(inputdata, 'fromSuper'))
+                throw new TypeError(`Special section of type ${SPECIAL_SECTIONS_STRINGS[+inputdata.type]} must be constructed with its dedicated constructor.`);
             this.nameOffset = new uint32(inputdata.nameOffset);
             this.type = new uint32(inputdata.type) as SectionType;
             this.flags = new uint32(inputdata.flags);
@@ -28,10 +43,7 @@ export class Section extends Structs.Section {
                 this.storedOffset = new uint32(0xFFFFFFFF); // Special value for internal use
                 this.storedSize = new uint32(0xFFFFFFFF); // Special value for internal use
                 if (!inputdata.data) {
-                    if (
-                        sectionType === SectionType.StrTab || sectionType === SectionType.SymTab ||
-                        sectionType === SectionType.Rela || sectionType === SectionType.RPLFileInfo
-                    ) return this;
+                    if (Reflect.get(inputdata, 'fromSuper')) return this;
                     else throw new TypeError('Sections not of type Null or NoBits must have data.');
                 }
                 this.#data = inputdata.data;
@@ -93,9 +105,7 @@ export class Section extends Structs.Section {
     }
 
     get size(): uint32 {
-        // NOTE: NoBits size hardcoding makes it annoying to change .bss sizes if ever needed.
-        // (Currently, the entire NoBits section instance will need to be recreated and replaced)
-        return new uint32(this.data?.byteLength ?? (+this.type === SectionType.NoBits ? <number>this.storedSize : 0));
+        return new uint32(this.data?.byteLength ?? 0);
     }
 
     get linkedSection(): Section | null {
@@ -103,16 +113,15 @@ export class Section extends Structs.Section {
     }
 
     get crc32Hash(): uint32 {
-        return new uint32(this.hasData ? Number(Util.crc32(this.data!)) : 0x00000000);
+        return new uint32(this.hasData ? Util.crc32(this.data!) : 0x00000000);
     }
     
     get data(): Uint8Array | null {
         return this.#data;
     }
-
     set data(value: Uint8Array | null) {
-        if (!this.hasData) throw new TypeError('Cannot set data of NoBits or Null section.');
-        if (value === null || value.byteLength === 0) throw new TypeError('Cannot set data of section to empty data or null.');
+        if (!this.hasData) throw new TypeError('Cannot set data of Null section.');
+        if (value === null || value.byteLength === 0) throw new TypeError('Cannot set data of section to empty or null.');
         this.#data = value;
     }
 
@@ -125,13 +134,34 @@ export class Section extends Structs.Section {
     #data: Uint8Array | null = null;
 }
 
-export class StringSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.SectionValues & { strings?: Record<number, string> }, rpx: RPL) {
-        super(inputdata, rpx);
+export class NoBitsSection extends Section {
+    constructor(inputdata: DataWrapper | Omit<Structs.SectionValues, 'type'> & { size?: number }, rpx: RPL) {
         if (!(inputdata instanceof DataWrapper)) {
-            this.strings = new StringStore();
-            return this; // TODO
+            Reflect.set(inputdata, 'type', SectionType.NoBits);
+            Reflect.set(inputdata, 'fromSuper', true);
+            super(<Structs.SectionValues>inputdata, rpx);
+            Reflect.set(this, 'storedSize', new uint32(inputdata.size ?? 0));
+            return this;
         }
+        super(inputdata, rpx);
+    }
+
+    override get size(): uint32 { return Reflect.get(this, 'storedSize') as uint32; }
+    override set size(v: uint32) { Reflect.set(this, 'storedSize', v); }
+    override get data(): null { return null; }
+    override get hasData(): boolean { return false; }
+}
+
+export class StringSection extends Section {
+    constructor(inputdata: DataWrapper | Omit<Structs.SectionValues, 'type'>, rpx: RPL) {
+        if (!(inputdata instanceof DataWrapper)) {
+            Reflect.set(inputdata, 'type', SectionType.StrTab);
+            Reflect.set(inputdata, 'fromSuper', true);
+            super(<Structs.SectionValues>inputdata, rpx);
+            this.strings = new StringStore(); // Use `StringStore.add()` to add strings to manually created StrTab sections
+            return this;
+        }
+        super(inputdata, rpx);
         if (!super.hasData) throw new Error('String section cannot be empty.');
         this.strings = new StringStore(super.data!);
     }
@@ -150,15 +180,20 @@ export class StringSection extends Section {
 }
 
 export class SymbolSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.SectionValues & { symbols?: ELFSymbol[] }, rpx: RPL) {
-        super(inputdata, rpx);
+    constructor(inputdata: DataWrapper | Omit<Structs.SectionValues, 'type'> & { symbols?: ELFSymbol[] }, rpx: RPL) {
         if (!(inputdata instanceof DataWrapper)) {
-            return this; // TODO
+            Reflect.set(inputdata, 'type', SectionType.SymTab);
+            Reflect.set(inputdata, 'fromSuper', true);
+            super(<Structs.SectionValues>inputdata, rpx);
+            this.symbols = inputdata.symbols ?? [];
+            return this;
         }
+        super(inputdata, rpx);
         if (!super.hasData) throw new Error('Symbol section cannot be empty.');
         const data = new DataWrapper(super.data!);
         const num = super.data!.byteLength / (<number>this.entSize);
-    
+        
+        this.symbols = [];
         for (let i = 0; i < num; i++) {
             const symbol = new ELFSymbol(this);
             symbol.nameOffset = data.passUint32();
@@ -190,18 +225,26 @@ export class SymbolSection extends Section {
         return new uint32(<number>this.entSize * this.symbols.length);
     }
 
-    symbols: ELFSymbol[] = [];
+    symbols: ELFSymbol[];
 }
 
 export class RelocationSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.SectionValues & { relocations?: Relocation[] }, rpx: RPL, parseRelocs = false) {
-        super(inputdata, rpx);
+    constructor(
+        inputdata: DataWrapper | Omit<Structs.SectionValues, 'type'> & { relocations?: Relocation[], type: SectionType.Rel | SectionType.Rela },
+        rpx: RPL, parseRelocs = false
+    ) {
         if (!(inputdata instanceof DataWrapper)) {
-            return this; // TODO
+            Reflect.set(inputdata, 'fromSuper', true);
+            super(inputdata, rpx);
+            this.parsed = true;
+            this.relocations = inputdata.relocations ?? [];
+            return this;
         }
+        super(inputdata, rpx);
         if (!super.hasData) throw new Error('Relocation section cannot be empty.');
+        this.parsed = parseRelocs;
+        this.relocations = [];
         if (!parseRelocs) return this;
-        else this.#parsed = true;
 
         const data = new DataWrapper(super.data!);
         const num = super.data!.byteLength / (<number>this.entSize);
@@ -217,11 +260,11 @@ export class RelocationSection extends Section {
     }
 
     override set data(value: Uint8Array) {
-        if (this.#parsed) throw new Error('Cannot directly modify data of parsed relocation section.');
+        if (this.parsed) throw new Error('Cannot directly modify data of parsed relocation section.');
         else super.data = value;
     }
     override get data(): ReadonlyDataWrapper {
-        if (!this.#parsed) return new ReadonlyDataWrapper(super.data!);
+        if (!this.parsed) return new ReadonlyDataWrapper(super.data!);
         const buffer = new DataWrapper(Util.allocUnsafe(<number>this.entSize * this.relocations.length));
         for (const reloc of this.relocations) {
             buffer.dropUint32(reloc.addr);
@@ -234,17 +277,23 @@ export class RelocationSection extends Section {
         return true;
     }
     override get size(): uint32 {
-        return new uint32(this.#parsed ? <number>this.entSize * this.relocations.length : super.data!.byteLength);
+        return new uint32(this.parsed ? <number>this.entSize * this.relocations.length : super.data!.byteLength);
     }
 
-    #parsed: boolean = false;
-    relocations: Relocation[] = [];
+    parsed: boolean;
+    relocations: Relocation[];
 }
 
 export class RPLCrcSection extends Section {
-    constructor(inputdata: DataWrapper, rpx: RPL) {
+    constructor(inputdata: DataWrapper | Omit<Structs.SectionValues, 'type'>, rpx: RPL) {
+        if (!(inputdata instanceof DataWrapper)) {
+            Reflect.set(inputdata, 'type', SectionType.RPLCrcs);
+            Reflect.set(inputdata, 'fromSuper', true);
+            super(<Structs.SectionValues>inputdata, rpx);
+            return this;
+        }
         super(inputdata, rpx);
-        if (!super.hasData) throw new Error('RPL CRC section cannot be empty.');
+        if (!super.hasData) throw new Error('RPL CRCs section cannot be empty.');
     }
 
     override get data(): ReadonlyDataWrapper {
@@ -260,27 +309,31 @@ export class RPLCrcSection extends Section {
         return new uint32(0);
     }
 
+    /** @warning This will trigger the data generation of all sections. **SLOW** */
     get crcs() {
         const hashes: uint32[] = [];
-        for (let i = 0; i < this.rpx.sections.length; i++) {
-            hashes.push(this.rpx.sections[i].crc32Hash);
-        }
+        for (let i = 0; i < this.rpx.sections.length; i++) hashes.push(this.rpx.sections[i].crc32Hash);
         return hashes;
     }
 }
 
 export class RPLFileInfoSection extends Section {
-    constructor(inputdata: DataWrapper | Structs.SectionValues & { fileinfo?: Structs.RPLFileInfo }, rpx: RPL) {
-        super(inputdata, rpx);
+    constructor(inputdata: DataWrapper | Omit<Structs.SectionValues, 'type'> & { fileinfo?: Structs.RPLFileInfo }, rpx: RPL) {
         if (!(inputdata instanceof DataWrapper)) {
-            this.strings = new StringStore();
-            return this; // TODO
+            Reflect.set(inputdata, 'type', SectionType.RPLFileInfo);
+            Reflect.set(inputdata, 'fromSuper', true);
+            super(<Structs.SectionValues>inputdata, rpx);
+            this.fileinfo = inputdata.fileinfo ?? new Structs.RPLFileInfo;
+            this.strings = new StringStore(undefined, +this.fileinfo.stringsOffset); // Use `StringStore.add()` to add strings to manually created RPLFileInfo sections
+            return this;
         }
+        super(inputdata, rpx);
         if (!super.hasData) throw new Error('RPL File Info section cannot be empty.');
         if (super.data!.byteLength < 0x60) throw new Error('RPL File Info section is too small, must be at least 0x60 in size.');
 
+        this.fileinfo = new Structs.RPLFileInfo();
+        
         const data = new DataWrapper(super.data!);
-
         const magic = data.passUint16();
         if (+magic !== +this.fileinfo.magic) throw new Error(`RPL File Info section magic number is invalid. Expected 0xCAFE, got 0x${magic.toString(16).toUpperCase()}`);
 
@@ -349,22 +402,21 @@ export class RPLFileInfoSection extends Section {
         buffer.dropUint16(this.fileinfo.tlsModuleIndex);
         buffer.dropUint16(this.fileinfo.tlsAlignShift);
         buffer.dropUint32(this.fileinfo.runtimeFileInfoSize);
-        return new ReadonlyDataWrapper(Buffer.concat([buffer, this.strings.buffer]));
+        return new ReadonlyDataWrapper(Buffer.concat([
+            buffer, new Uint8Array(<number>this.fileinfo.stringsOffset - 0x60), this.strings.buffer
+        ]));
     }
     override get hasData(): true {
         return true;
     }
     override get size(): uint32 {
-        return new uint32(0x60 + this.strings.size);
+        return new uint32(0x60 + (<number>this.fileinfo.stringsOffset - 0x60) + this.strings.size);
     }
 
     /** These are not the actual sizes stored on the section,
      *  but rather the ideal calculated values for each of them.
      *  @see `RPLFileInfoSection.adjustFileInfoSizes()` */
     get fileinfoSizes() {
-        const CodeBaseAddress = 0x02000000 as const;
-        const DataBaseAddress = 0x10000000 as const;
-        const LoadBaseAddress = 0xC0000000 as const;
         const info = { textSize: 0, dataSize: 0, loadSize: 0, tempSize: 0 };
 
         for (const section of this.rpx.sections) {
@@ -398,7 +450,7 @@ export class RPLFileInfoSection extends Section {
         this.fileinfo.tempSize = new uint32(tempSize);
     }
 
-    readonly fileinfo: Structs.RPLFileInfo = new Structs.RPLFileInfo;
+    readonly fileinfo: Structs.RPLFileInfo;
     /** Array of null-terminated strings until the end of the section */
     readonly strings: StringStore;
 }
