@@ -9,7 +9,9 @@ import fs from 'fs';
 console.time('total');
 
 const RPX_PATH = WSLSafePath('Q:/.EmulatorGames/WiiU/Tools/SuperHacks/rpxs/red-pro2.vanilla.rpx');
+console.time('load file');
 const RPX_DATA = fs.readFileSync(RPX_PATH);
+console.timeEnd('load file');
 console.time('parse file');
 const rpx = new RPL(RPX_DATA);
 console.timeEnd('parse file');

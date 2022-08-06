@@ -1,8 +1,10 @@
+/* eslint-disable semi */
 import { FileBlob } from 'bun';
 import path from 'path';
 
 namespace Util {
     export async function write(dest: FileBlob | PathLike, input: string | Blob | TypedArray | ArrayBufferLike | BlobPart[]): Promise<number> {
+        // @ts-expect-error will be fixed in the next typings release
         return await Bun.write(dest, input);
     }
 
@@ -19,7 +21,8 @@ namespace Util {
     }
 
     export function gunzipSync(data: Uint8Array): Uint8Array {
-        return Bun.gunzipSync(data);
+        // @ts-expect-error will be fixed in the next typings release
+        return (<(b: Uint8Array) => Uint8Array>Bun.gunzipSync)(data)
     }
 
     export const roundUp = (n: number, multiple: number): number => Math.ceil(n / multiple) * multiple;

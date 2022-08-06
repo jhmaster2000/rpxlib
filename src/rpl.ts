@@ -9,9 +9,9 @@ import Util from './util';
 
 interface RPLSaveOptions {
     /** Ignore `Compressed` flags and just try to compress all compressable sections.
-     * 
+     *
      * This is useful for compressing ELF files back to RPX/RPL without manually selecting sections to compress.
-     * 
+     *
      * A value of `false` for `compression` parameter has higher priority than this. */
     compressAsPossible?: boolean;
 }

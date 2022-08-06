@@ -44,7 +44,7 @@ export namespace Structs {
     export type SectionValues = { [K in keyof Section]: Section[K] };
 
     export class Symbol {
-        /** Offset from the start of the {@link Section.link linked string table section} of 
+        /** Offset from the start of the {@link Section.link linked string table section} of
           * this symbol's section, to the address of this symbol's name in said table, if any. */
         public   nameOffset: uint32 = new uint32; //! uint32
         /** The value of this symbol. The interpretation of the value is dependent on a few things but is generally an offset or address. */
@@ -53,7 +53,7 @@ export namespace Structs {
         public   info: uint8 = new uint8;         //* uint8
         public   other: uint8 = new uint8;        //* uint8
         /** Section index for this symbol.
-          * @summary This is the index of the section for this symbol. There are also special values 
+          * @summary This is the index of the section for this symbol. There are also special values
           * such as 0xFFF1 for an absolute index symbol in a relocatable ELF file (object file). */
         public   shndx: uint16 = new uint16;      //? uint16
     }

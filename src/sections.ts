@@ -115,7 +115,7 @@ export class Section extends Structs.Section {
     get crc32Hash(): uint32 {
         return new uint32(this.hasData ? Util.crc32(this.data!) : 0x00000000);
     }
-    
+
     get data(): Uint8Array | null {
         return this.#data;
     }
@@ -192,7 +192,7 @@ export class SymbolSection extends Section {
         if (!super.hasData) throw new Error('Symbol section cannot be empty.');
         const data = new DataWrapper(super.data!);
         const num = super.data!.byteLength / (<number>this.entSize);
-        
+
         this.symbols = [];
         for (let i = 0; i < num; i++) {
             const symbol = new ELFSymbol(this);
@@ -332,7 +332,7 @@ export class RPLFileInfoSection extends Section {
         if (super.data!.byteLength < 0x60) throw new Error('RPL File Info section is too small, must be at least 0x60 in size.');
 
         this.fileinfo = new Structs.RPLFileInfo();
-        
+
         const data = new DataWrapper(super.data!);
         const magic = data.passUint16();
         if (+magic !== +this.fileinfo.magic) throw new Error(`RPL File Info section magic number is invalid. Expected 0xCAFE, got 0x${magic.toString(16).toUpperCase()}`);
@@ -364,7 +364,7 @@ export class RPLFileInfoSection extends Section {
         this.fileinfo.runtimeFileInfoSize = data.passUint32();
 
         // Section does not have strings
-        // NOTE: Silently ignoring string offset out of bounds
+        // NOTE: Silently ignoring string offset out of bounds for now
         if (super.data!.byteLength === 0x60 || this.fileinfo.stringsOffset < 0x60 || super.data!.byteLength <= this.fileinfo.stringsOffset) {
             this.strings = new StringStore();
             return this;

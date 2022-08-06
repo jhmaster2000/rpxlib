@@ -3,14 +3,14 @@
 import * as ffi from 'bun:ffi';
 import { FFIType } from 'bun:ffi';
 
-namespace zlibng {    
+namespace zlibng {
     /**
      * Purely cosmetic FFIType.pointer wrapper which allows a type annotation for the pointer type.
-     * 
+     *
      * **Example:** An `int*` type in C can be represented as `FFITypePointer<FFIType.int>()`
      */
     const FFITypePointer = <_>() => /* FFIType.pointer */ 12 as const;
-    
+
     /**
      * Maps zconf.h / Zlib docs types to appropriate FFI types.
      * Note that the original Zlib was written in the era of 16 bit computers,
@@ -36,7 +36,7 @@ namespace zlibng {
         z_off_t: FFIType.int32_t,
         cstring: FFIType.cstring
     };
-    
+
     // These types are for use with FFITypePointer
     type Byte = typeof ZlibFFIType.Byte; type Bytef = Byte;
     //type uInt = typeof ZlibFFIType.uInt; //type uIntf = uInt;
@@ -50,7 +50,7 @@ namespace zlibng {
     //type cstring = typeof ZlibFFIType.cstring;
 
     export type CompressionLevel = -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-    
+
     const {
         symbols: libzng,
         //close: _libzngClose
@@ -78,7 +78,7 @@ namespace zlibng {
         const dest = new Uint8Array(destLen);
         return new Uint8Array(compress(dest, destLen, data, data.byteLength, level));
     }
-    
+
     export function compress(dest: Uint8Array, destLen: number, source: Uint8Array, sourceLen: number, level: number = constants.Z_DEFAULT_COMPRESSION): ArrayBuffer {
         const destPtr = ffi.ptr(dest.buffer.slice(0));
         const destLenPtr = ffi.ptr(new Uint32Array([destLen]));
@@ -94,11 +94,11 @@ namespace zlibng {
     export function compressBound(sourceLen: number): number {
         return libzng.compressBound(sourceLen);
     }
-    
+
     export function version(): string {
         return libzng.zlibVersion();
     }
-    
+
     export function compileFlags(): CompileFlags {
         const flags = <number>libzng.zlibCompileFlags();
         return {
@@ -134,7 +134,7 @@ namespace zlibng {
             }
         };
     }
-    
+
     const /* enum */ TypeSize = {
         0b00: 16 as TypeSize,
         0b01: 32 as TypeSize,
@@ -142,7 +142,7 @@ namespace zlibng {
         0b11: -1 as TypeSize // other
     };
     type TypeSize = 16 | 32 | 64 | -1;
-    
+
     export interface CompileFlags {
         /** Returns the raw numeric value of the compile flags bitfield */
         valueOf(): number,
@@ -177,7 +177,7 @@ namespace zlibng {
         }
         // 27-31 (RESERVED 0)
     }
-    
+
     type VersionDigit = 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15;
     const zlib_version = <string>libzng.zlibVersion();
     const zlib_version_major  = (Number(zlib_version.split('.')[0]) || 0) as VersionDigit;
@@ -216,7 +216,7 @@ namespace zlibng {
         Z_RLE: 3,
         Z_FIXED: 4,
         Z_DEFAULT_STRATEGY: 0,
-        Z_BINARY: 0, 
+        Z_BINARY: 0,
         Z_TEXT: 1,
         Z_ASCII: 1,
         Z_UNKNOWN: 2,

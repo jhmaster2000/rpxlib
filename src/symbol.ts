@@ -16,7 +16,7 @@ export class ELFSymbol extends Structs.Symbol {
     get type(): SymbolType { return <number>this.info & 0xF; }
     get binding(): SymbolBinding { return <number>this.info >> 4; }
     get visibility(): SymbolVisibility { return <number>this.other & 0x3; }
-    
+
     set type(type: SymbolType) {
         this.info = (0x2C >> 4 << 4) + +type;
     }
