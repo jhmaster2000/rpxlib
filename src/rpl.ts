@@ -193,6 +193,7 @@ export class RPL extends Header {
 
         filepath = Util.resolve(`${filepath}.${compression === false ? 'elf' : 'rpx'}`);
         fs.writeFileSync(filepath, file);
+        fs.appendFileSync(filepath, '\0');
         return filepath;
     }
 
@@ -250,6 +251,7 @@ export class RPL extends Header {
     pushSection(section: Section) {
         const fileinfo = this.#sections.pop()!;
         const crcs = this.#sections.pop()!;
+        Reflect.set(section, 'rpx', this);
         this.#sections.push(section, crcs, fileinfo);
         return section;
     }
