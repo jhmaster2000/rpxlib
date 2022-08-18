@@ -73,7 +73,7 @@ namespace zlibng {
         }
     });
 
-    export function deflateSync(data: Uint8Array, { level = constants.Z_DEFAULT_COMPRESSION }: { level?: number } = {}): Uint8Array {
+    export function deflateSync(data: Uint8Array, { level = constants.Z_DEFAULT_COMPRESSION }: { level?: CompressionLevel } = {}): Uint8Array {
         return Bun.deflateSync(data, { level, windowBits: -15 });
         //const destLen = compressBound(data.byteLength);
         //const dest = new Uint8Array(destLen);
