@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "rpxlib",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A general purpose RPL/RPX library.",
   "main": "src/main.ts",
   "author": "jhmaster",
