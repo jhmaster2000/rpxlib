@@ -17,7 +17,7 @@ interface RPLSaveOptions {
 }
 
 interface RPLParseOptions {
-    /** @warning Makes parsing and saving **VERY SLOW** */
+    /** @warning Makes parsing and saving **VERY SLOW** if the file contains large relocation sections */
     parseRelocs?: boolean;
 }
 
