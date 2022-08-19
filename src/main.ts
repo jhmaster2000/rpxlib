@@ -9,6 +9,5 @@ export * from './sections';
 export * from './stringstore';
 export * from './structs';
 export * from './symbol';
-export * from './util';
 export * from './wslsafepath';
-export * from './zlibng';
+export { default as Util } from './util.js';
