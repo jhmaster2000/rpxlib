@@ -2,6 +2,10 @@
 
 A general purpose RPL/RPX library.
 
+* Zero dependencies
+* Reading and writing
+* Balanced between speed and data safety
+
 ## Usage
 ```ts
 import * as rpxlib from 'rpxlib';
