@@ -1,5 +1,4 @@
 import fs from 'fs';
-import zlibng from './zlibng';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
 import { SectionFlags, SectionType } from './enums';
 import { Header } from './header';
@@ -20,6 +19,8 @@ interface RPLParseOptions {
     /** @warning Makes parsing and saving **VERY SLOW** if the file contains large relocation sections */
     parseRelocs?: boolean;
 }
+
+type CompressionLevel = -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export class RPL extends Header {
     constructor(data: TypedArray, opts: RPLParseOptions = {}) {
@@ -61,7 +62,7 @@ export class RPL extends Header {
      * - `0` disables compression but still wraps the data in a zlib header and footer.
      * @returns The absolute path the output file was saved to.
      */
-    save(filepath: string, compression: boolean | zlibng.CompressionLevel = false, options: RPLSaveOptions = {}): string {
+    save(filepath: string, compression: boolean | CompressionLevel = false, options: RPLSaveOptions = {}): string {
         const headers = new DataWrapper(Util.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
@@ -86,7 +87,7 @@ export class RPL extends Header {
         headers.zerofill(<number>this.sectionHeadersOffset - <number>this.headerSize); //? padding
 
         const fileinfoSection = (<RPLFileInfoSection>this.#sections.find(s => s instanceof RPLFileInfoSection));
-        if (compression === true) compression = <zlibng.CompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
+        if (compression === true) compression = <CompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
         else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? -1 : compression);
 
         options.compressAsPossible ??= false;
@@ -149,7 +150,11 @@ export class RPL extends Header {
                     } else {
                         const data = section.data!;
                         const uncompressed = data instanceof ReadonlyDataWrapper ? new Uint8Array(data['@@arraybuffer']) : data;
-                        const compressed = Buffer.concat([ Util.allocUnsafe(4), zlibng.deflateSync(uncompressed, { level: compression }) ]);
+                        const compressed = Buffer.concat([
+                            Util.allocUnsafe(4),
+                            // Setting windowBits to -15 as a workaround for an internal engine bug, it shouldn't be needed.
+                            Bun.deflateSync(uncompressed, { level: compression, windowBits: -15 })
+                        ]);
                         compressed.writeUint32BE(uncompressed.byteLength, 0);
 
                         if (compression !== 0 && compressed.byteLength >= uncompressed.byteLength) {
