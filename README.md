@@ -25,7 +25,7 @@ rpx.save('./path/to/save/file', true);
 
 * The library automatically handles and calculates section offsets, sizes, indexes, among other values and as such doesn't allow manually setting those.
 * In contrast, section virtual addresses are *NOT* handled or checked, the user must ensure those are valid manually.
-    * However `RPX.addressRanges` is provided to assist with finding the right values to use.
+    * However `RPL.addressRanges` is provided to assist with finding the right values to use.
 * Relocation sections are not parsed by default as they can be very large and slow to parse, it is recommended to read relocations manually from the raw data as you need them.
     * If you really want relocations parsed, you can pass an options object with `parseRelocs: true` to the `RPL` constructor.
         * You will be blocked from writing to the raw data of relocation sections if the relocations are parsed.
