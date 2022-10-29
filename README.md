@@ -34,4 +34,3 @@ rpx.save('./path/to/save/file', true);
         * For this reason it's highly recommended to not repeatedly call `Section.data` without need as you will be repeatedly regenerating the data for special sections.
         * It's also highly recommended to use `Section.size` over `Section.data.byteLength`, as the former does not require the generation of the entire raw section data for special sections.
 * Segment headers and data are not parsed since RPL/RPX files are not known to use those.
-_
