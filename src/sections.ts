@@ -1,12 +1,14 @@
-import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
-import { SectionFlags, SectionType } from './enums';
-import { CodeBaseAddress, DataBaseAddress, LoadBaseAddress, uint32 } from './primitives';
-import { Relocation } from './relocation';
-import { RPL } from './rpl';
-import { StringStore } from './stringstore';
-import { Structs } from './structs';
-import { ELFSymbol } from './symbol';
-import Util from './util';
+import { CodeBaseAddress, DataBaseAddress, LoadBaseAddress, uint32 } from './primitives.js';
+import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
+import { SectionFlags, SectionType } from './enums.js';
+import { StringStore } from './stringstore.js';
+import { Relocation } from './relocation.js';
+import { ELFSymbol } from './symbol.js';
+import { Structs } from './structs.js';
+import { crc32 } from '@foxglove/crc';
+import { RPL } from './rpl.js';
+import Util from './util.js';
+import zlib from 'zlib';
 
 const SPECIAL_SECTIONS_STRINGS: Record<number, string> = {
     0x00000002: 'Symbol Table',
@@ -64,7 +66,7 @@ export class Section extends Structs.Section {
         if (this.type !== SectionType.NoBits && this.type !== SectionType.Null && +this.storedOffset !== 0) {
             if (<number>this.flags & SectionFlags.Compressed) {
                 // Decompress section data
-                const decompressed = Util.gunzipSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
+                const decompressed = zlib.inflateSync(file.subarray(<number>this.storedOffset + 4, <number>this.storedOffset + <number>this.storedSize));
                 this.#data = decompressed.subarray(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength);
             } else {
                 // Section is not compressed
@@ -113,7 +115,7 @@ export class Section extends Structs.Section {
     }
 
     get crc32Hash(): uint32 {
-        return new uint32(this.hasData ? Util.crc32(this.data!) : 0x00000000);
+        return new uint32(this.hasData ? crc32(this.data!) : 0x00000000);
     }
 
     get data(): Uint8Array | null {
@@ -207,7 +209,7 @@ export class SymbolSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(Util.allocUnsafe(<number>this.entSize * this.symbols.length));
+        const buffer = new DataWrapper(Buffer.allocUnsafe(<number>this.entSize * this.symbols.length));
         for (const sym of this.symbols) {
             buffer.dropUint32(sym.nameOffset);
             buffer.dropUint32(sym.value);
@@ -265,7 +267,7 @@ export class RelocationSection extends Section {
     }
     override get data(): ReadonlyDataWrapper {
         if (!this.parsed) return new ReadonlyDataWrapper(super.data!);
-        const buffer = new DataWrapper(Util.allocUnsafe(<number>this.entSize * this.relocations.length));
+        const buffer = new DataWrapper(Buffer.allocUnsafe(<number>this.entSize * this.relocations.length));
         for (const reloc of this.relocations) {
             buffer.dropUint32(reloc.addr);
             buffer.dropUint32(reloc.info);
@@ -375,7 +377,7 @@ export class RPLFileInfoSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(Util.allocUnsafe(0x60));
+        const buffer = new DataWrapper(Buffer.allocUnsafe(0x60));
         buffer.dropUint16(this.fileinfo.magic);
         buffer.dropUint16(this.fileinfo.version);
         buffer.dropUint32(this.fileinfo.textSize);

@@ -1,11 +1,10 @@
-import { ABI, Class, Endian, ISA, SectionFlags, SectionType, SymbolBinding, SymbolType, SymbolVisibility, Type, Version } from './enums';
-import { int, sint16, sint32, sint8, uint32 } from './primitives';
-import { RPL } from './rpl';
-import { RelocationSection, RPLCrcSection, RPLFileInfoSection, StringSection, SymbolSection } from './sections';
-import Util from './util';
+import { ABI, Class, Endian, ISA, SectionFlags, SectionType, SymbolBinding, SymbolType, SymbolVisibility, Type, Version } from './enums.js';
+import { RelocationSection, RPLCrcSection, RPLFileInfoSection, StringSection, SymbolSection } from './sections.js';
+import { int, sint16, sint32, sint8, uint32 } from './primitives.js';
+import { RPL } from './rpl.js';
 
-async function log<T>(label: string, value: T, formatter: (v: T) => string = String, parenFormatter?: (v: T) => string, endline = true) {
-    await Util.write(Util.stdout,
+function log<T>(label: string, value: T, formatter: (v: T) => string = String, parenFormatter?: (v: T) => string, endline = true) {
+    process.stdout.write(
         '   ' + label + ' | ' + formatter(value) +
         (parenFormatter ? ` (${parenFormatter(value)})` : '') +
         (endline ? '\n' : '')
@@ -98,7 +97,7 @@ interface SpecialSectionsOptions {
     rplfileinfo?: boolean;
 }
 
-export async function debug(rpx: RPL, specialSections: boolean | SpecialSectionsOptions = false, logPerfs = false): Promise<void> {
+export function debug(rpx: RPL, specialSections: boolean | SpecialSectionsOptions = false, logPerfs = false): void {
     let logperf: (msg: string, startPerf: number) => void;
     if (logPerfs) logperf = (msg: string, startPerf: number) => console.log(msg, performance.now() - startPerf, 'ms');
     else logperf = () => { return; };
@@ -106,25 +105,25 @@ export async function debug(rpx: RPL, specialSections: boolean | SpecialSections
     const debugPerf = performance.now();
     let perf = performance.now();
     console.log('[ELF Header]');
-    await log('Magic                    ', new TextDecoder().decode(new Uint8Array([(<number>rpx.magic) >> 24 & 0xFF, (<number>rpx.magic) >> 16 & 0xFF, (<number>rpx.magic) >> 8 & 0xFF, (<number>rpx.magic) & 0xFF])));
-    await log('Class                    ', rpx.class, stringifyClass, hex8);
-    await log('Endian                   ', rpx.endian, stringifyEndian, hex8);
-    await log('Version                  ', rpx.version, stringifyVersion, hex8);
-    await log('ABI                      ', rpx.abi, stringifyABI, hex8);
-    await log('ABI Version              ', rpx.abiVersion, hex8);
-    await log('Type                     ', rpx.type, stringifyType, hex16);
-    await log('ISA                      ', rpx.isa, stringifyISA, hex16);
-    await log('ISA Version              ', rpx.isaVersion, hex32);
-    await log('Entry Point              ', rpx.entryPoint, hex32);
-    await log('Prog. H. Offset          ', rpx.programHeadersOffset, hex32);
-    await log('Sect. H. Offset          ', rpx.sectionHeadersOffset, hex32);
-    await log('ISA Flags                ', rpx.isaFlags, hex32);
-    await log('Header Size              ', rpx.headerSize, hex16);
-    await log('Prog. H. Entry Size      ', rpx.programHeadersEntrySize, hex16);
-    await log('Prog. H. Entry Count     ', rpx.programHeadersEntryCount, hex16);
-    await log('Sect. H. Entry Size      ', rpx.sectionHeadersEntrySize, hex16);
-    await log('Sect. H. Entry Count     ', rpx.sectionHeadersEntryCount, hex16);
-    await log('Sect. H. StrTab Sect. Idx', rpx.shstrIndex, hex16);
+    log('Magic                    ', new TextDecoder().decode(new Uint8Array([(<number>rpx.magic) >> 24 & 0xFF, (<number>rpx.magic) >> 16 & 0xFF, (<number>rpx.magic) >> 8 & 0xFF, (<number>rpx.magic) & 0xFF])));
+    log('Class                    ', rpx.class, stringifyClass, hex8);
+    log('Endian                   ', rpx.endian, stringifyEndian, hex8);
+    log('Version                  ', rpx.version, stringifyVersion, hex8);
+    log('ABI                      ', rpx.abi, stringifyABI, hex8);
+    log('ABI Version              ', rpx.abiVersion, hex8);
+    log('Type                     ', rpx.type, stringifyType, hex16);
+    log('ISA                      ', rpx.isa, stringifyISA, hex16);
+    log('ISA Version              ', rpx.isaVersion, hex32);
+    log('Entry Point              ', rpx.entryPoint, hex32);
+    log('Prog. H. Offset          ', rpx.programHeadersOffset, hex32);
+    log('Sect. H. Offset          ', rpx.sectionHeadersOffset, hex32);
+    log('ISA Flags                ', rpx.isaFlags, hex32);
+    log('Header Size              ', rpx.headerSize, hex16);
+    log('Prog. H. Entry Size      ', rpx.programHeadersEntrySize, hex16);
+    log('Prog. H. Entry Count     ', rpx.programHeadersEntryCount, hex16);
+    log('Sect. H. Entry Size      ', rpx.sectionHeadersEntrySize, hex16);
+    log('Sect. H. Entry Count     ', rpx.sectionHeadersEntryCount, hex16);
+    log('Sect. H. StrTab Sect. Idx', rpx.shstrIndex, hex16);
     logperf('Got ELF header in', perf);
 
     let perfx: number;
@@ -219,7 +218,7 @@ export async function debug(rpx: RPL, specialSections: boolean | SpecialSections
                         relstr += `${hex32(rel.info)}  ${hex8(rel.type)}  ${rel.symbolIndex}`;
                         console.log(relstr);
                     }
-                    await Util.write(Util.stdout, '\n');
+                    process.stdout.write('\n');
                     logperf('Traversed RelocationSection.relocations in', perf);
                     break;
                 }
@@ -230,12 +229,12 @@ export async function debug(rpx: RPL, specialSections: boolean | SpecialSections
                     perf = performance.now();
                     const crcs = section.crcs;
                     logperf('Computed RPLCrcSection.crcs in', perf);
-                    await Util.write(Util.stdout, '        ');
+                    process.stdout.write('        ');
                     for (let i = 0; i < crcs.length; i++) {
-                        await Util.write(Util.stdout, crcs[i]!.toString(16).toUpperCase().padStart(8, '0') + '    ');
-                        if ((i + 1) % 10 === 0) await Util.write(Util.stdout, '\n        ');
+                        process.stdout.write(crcs[i]!.toString(16).toUpperCase().padStart(8, '0') + '    ');
+                        if ((i + 1) % 10 === 0) process.stdout.write('\n        ');
                     }
-                    await Util.write(Util.stdout, '\n\n');
+                    process.stdout.write('\n\n');
                     break;
                 }
                 case SectionType.RPLFileInfo: {

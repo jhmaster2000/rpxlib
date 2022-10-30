@@ -1,5 +1,4 @@
-import { int } from './primitives';
-import Util from './util';
+import { int } from './primitives.js';
 
 /** @internal */
 type WritableStringStore = StringStore & { [offset: number]: string };
@@ -30,12 +29,12 @@ export class StringStore {
     }
     /** All of the StringStore's strings as a buffer. */
     get buffer(): Uint8Array {
-        const buffer = Util.allocUnsafe(this.size);
+        const buffer = Buffer.allocUnsafe(this.size);
         const encoder = new TextEncoder();
         for (const key in this) {
             const keyn = +key;
             if (keyn !== keyn) continue;
-            const encoded = Util.allocUnsafe(this[key].length + 1);
+            const encoded = Buffer.allocUnsafe(this[key].length + 1);
             encoder.encodeInto(this[key] + '\0', encoded);
             buffer.set(encoded, keyn - this.#dataOffset);
         }

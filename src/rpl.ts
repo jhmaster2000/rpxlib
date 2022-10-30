@@ -1,10 +1,13 @@
 import fs from 'fs';
-import { DataWrapper, ReadonlyDataWrapper } from './datawrapper';
-import { SectionFlags, SectionType } from './enums';
-import { Header } from './header';
-import { sint32, uint16, uint32 } from './primitives';
-import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections';
-import Util from './util';
+import zlib from 'zlib';
+import Util from './util.js';
+import { crc32 } from '@foxglove/crc';
+import { Header } from './header.js';
+import { DataSink } from './datasink.js';
+import { SectionFlags, SectionType } from './enums.js';
+import { sint32, uint16, uint32 } from './primitives.js';
+import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
+import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
 
 interface RPLSaveOptions {
     /** Ignore `Compressed` flags and just try to compress all compressable sections.
@@ -23,7 +26,7 @@ interface RPLParseOptions {
 type CompressionLevel = -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export class RPL extends Header {
-    constructor(data: TypedArray, opts: RPLParseOptions = {}) {
+    constructor(data: Uint8Array, opts: RPLParseOptions = {}) {
         const file = new DataWrapper(data);
         super(file);
 
@@ -63,7 +66,7 @@ export class RPL extends Header {
      * @returns The absolute path the output file was saved to.
      */
     save(filepath: string, compression: boolean | CompressionLevel = false, options: RPLSaveOptions = {}): string {
-        const headers = new DataWrapper(Util.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
+        const headers = new DataWrapper(Buffer.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
         headers.dropUint8(this.endian);
@@ -95,18 +98,18 @@ export class RPL extends Header {
         let crcsOffset = 0;
         let crcs: number[] = [];
         let currOffset = <number>this.sectionHeadersOffset + <number>this.sectionHeadersEntrySize * this.#sections.length;
-        const datasink = new Util.ArrayBufferSink();
+        const datasink = new DataSink();
 
         /** If uncompressedData is `true`, the section is considered the RPLCrcSection */
         const writeSectionDataAndCRC = (i: number, offset: number, uncompressedData: Uint8Array | true, compressedData?: Uint8Array): void => {
             if (uncompressedData === true) {
                 crcsOffset = offset;
                 const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
-                datasink.write(Bun.allocUnsafe(this.#sections.length * 4 /* Section.entSize */));
+                datasink.write(Buffer.allocUnsafe(this.#sections.length * 4 /* Section.entSize */));
             } else {
                 datasink.write(compressedData ?? uncompressedData);
                 const ix = i * 4;
-                const crc = Util.crc32(uncompressedData);
+                const crc = crc32(uncompressedData);
                 crcs[ix  ] = crc >> 24 & 0xFF;
                 crcs[ix+1] = crc >> 16 & 0xFF;
                 crcs[ix+2] = crc >>  8 & 0xFF;
@@ -151,9 +154,8 @@ export class RPL extends Header {
                         const data = section.data!;
                         const uncompressed = data instanceof ReadonlyDataWrapper ? new Uint8Array(data['@@arraybuffer']) : data;
                         const compressed = Buffer.concat([
-                            Util.allocUnsafe(4),
-                            // Setting windowBits to -15 as a workaround for an internal engine bug, it shouldn't be needed.
-                            Bun.deflateSync(uncompressed, { level: compression, windowBits: -15 })
+                            Buffer.allocUnsafe(4),
+                            zlib.deflateSync(uncompressed, { level: compression })
                         ]);
                         compressed.writeUint32BE(uncompressed.byteLength, 0);
 

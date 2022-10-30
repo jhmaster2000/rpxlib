@@ -1,6 +1,6 @@
-import { DataWrapper } from './datawrapper';
-import { ABI, Class, Endian, ISA, Type, Version } from './enums';
-import { Structs } from './structs';
+import { ABI, Class, Endian, ISA, Type, Version } from './enums.js';
+import { DataWrapper } from './datawrapper.js';
+import { Structs } from './structs.js';
 
 export class Header extends Structs.Header {
     constructor(file: DataWrapper) {

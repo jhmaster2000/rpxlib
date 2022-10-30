@@ -1,4 +1,4 @@
-import { uint8, uint16, uint32, sint8, sint16, sint32 } from './primitives';
+import { uint8, uint16, uint32, sint8, sint16, sint32, TypedArray } from './primitives.js';
 
 export class DataWrapper extends Uint8Array {
     constructor(arg: TypedArray) { super(arg.buffer, arg.byteOffset, arg.byteLength); }

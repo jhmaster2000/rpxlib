@@ -1,5 +1,5 @@
-import { uint8, uint16, uint32, sint32 } from './primitives';
-import * as Enums from './enums';
+import { uint8, uint16, uint32, sint32 } from './primitives.js';
+import * as Enums from './enums.js';
 
 export namespace Structs {
     export class Header {
