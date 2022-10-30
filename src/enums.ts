@@ -131,3 +131,91 @@ export enum SymbolVisibility {
     Hidden    = 0x02 & 0x3,
     Protected = 0x03 & 0x3
 }
+
+/** The type of a relocation. //* uint8 */
+export enum RelocationType {
+    None = 0x00,
+    /** (R_PPC_ADDR32) */
+    PPCAddr32 = 0x01,
+    /** (R_PPC_ADDR24) */
+    PPCAddr24 = 0x02,
+    /** (R_PPC_ADDR16) */
+    PPCAddr16 = 0x03,
+    /** (R_PPC_ADDR16_LO) */
+    PPCAddr16Lo = 0x04,
+    /** (R_PPC_ADDR16_HI) */
+    PPCAddr16Hi = 0x05,
+    /** (R_PPC_ADDR16_HA) */
+    PPCAddr16Ha = 0x06,
+    /** (R_PPC_ADDR14) */
+    PPCAddr14 = 0x07,
+    /** (R_PPC_ADDR14_BRTAKEN) */
+    PPCAddr14BrTaken = 0x08,
+    /** (R_PPC_ADDR14_BRNTAKEN) */
+    PPCAddr14BrNotTaken = 0x09,
+    /** (R_PPC_REL24) */
+    PPCRel24 = 0x0A,
+    /** (R_PPC_REL14) */
+    PPCRel14 = 0x0B,
+    /** (R_PPC_REL14_BRTAKEN) */
+    PPCRel14BrTaken = 0x0C,
+    /** (R_PPC_REL14_BRNTAKEN) */
+    PPCRel14BrNotTaken = 0x0D,
+    /** (R_PPC_GOT16) */
+    PPCGot16 = 0x0E,
+    /** (R_PPC_GOT16_LO) */
+    PPCGot16Lo = 0x0F,
+    /** (R_PPC_GOT16_HI) */
+    PPCGot16Hi = 0x10,
+    /** (R_PPC_GOT16_HA) */
+    PPCGot16Ha = 0x11,
+    /** (R_PPC_PLTREL24) */
+    PPCPltRel24 = 0x12,
+    /** (R_PPC_COPY) */
+    PPCCopy = 0x13,
+    /** (R_PPC_GLOB_DAT) */
+    PPCGlobalData = 0x14,
+    /** (R_PPC_JMP_SLOT) */
+    PPCJumpSlot = 0x15,
+    /** (R_PPC_RELATIVE) */
+    PPCRelative = 0x16,
+    /** (R_PPC_LOCAL24PC) */
+    PPCLocal24PC = 0x17,
+    /** (R_PPC_UADDR32) */
+    PPCUAddr32 = 0x18,
+    /** (R_PPC_UADDR16) */
+    PPCUAddr16 = 0x19,
+    /** (R_PPC_REL32) */
+    PPCRel32 = 0x1A,
+    /** (R_PPC_PLT32) */
+    PPCPlt32 = 0x1B,
+    /** (R_PPC_PLTREL32) */
+    PPCPltRel32 = 0x1C,
+    /** (R_PPC_PLT16_LO) */
+    PPCPlt16Lo = 0x1D,
+    /** (R_PPC_PLT16_HI) */
+    PPCPlt16Hi = 0x1E,
+    /** (R_PPC_PLT16_HA) */
+    PPCPlt16Ha = 0x1F,
+    /** (R_PPC_SDAREL16) */
+    PPCSdaRel16 = 0x20,
+    /** (R_PPC_SECTOFF) */
+    PPCSectOff = 0x21,
+    /** (R_PPC_SECTOFF_LO) */
+    PPCSectOffLo = 0x22,
+    /** (R_PPC_SECTOFF_HI) */
+    PPCSectOffHi = 0x23,
+    /** (R_PPC_SECTOFF_HA) */
+    PPCSectOffHa = 0x24,
+    /** (R_PPC_ADDR30) */
+    PPCAddr30 = 0x25,
+
+    // ...RESERVED...
+
+    /** (R_PPC_EMB_START) */
+    PPCEmbNAddr32 = 101,
+    /** (R_PPC_EMB_END) */
+    PPCEmbNAddr16 = 200,
+
+    // ...RESERVED...
+}
