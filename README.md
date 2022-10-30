@@ -2,9 +2,9 @@
 
 A general purpose RPL/RPX library.
 
-* Zero dependencies
-* Reading and writing
-* Balanced between speed and data safety
+* Single dependency
+* Reading and writing support
+* Balanced between speed and data integrity
 
 ## Usage
 ```ts
