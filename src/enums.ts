@@ -213,9 +213,9 @@ export enum RelocationType {
     // ...RESERVED...
 
     /** (R_PPC_EMB_START) */
-    PPCEmbNAddr32 = 101,
+    PPCEmbStart = 101,
     /** (R_PPC_EMB_END) */
-    PPCEmbNAddr16 = 200,
+    PPCEmbEnd = 200,
 
     // ...RESERVED...
 }
