@@ -1,7 +1,7 @@
 {
     "type": "module",
     "name": "rpxlib",
-    "version": "0.3.0-node.1",
+    "version": "0.3.0-node.2",
     "description": "A general purpose RPL/RPX library.",
     "main": "dist/main.js",
     "author": "jhmaster",
