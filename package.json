@@ -1,9 +1,10 @@
 {
     "type": "module",
     "name": "rpxlib",
-    "version": "0.3.0-node.2",
+    "version": "0.3.0-node.3",
     "description": "A general purpose RPL/RPX library.",
     "main": "dist/main.js",
+    "types": "dist/main.d.ts",
     "author": "jhmaster",
     "license": "MIT",
     "keywords": [
