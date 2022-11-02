@@ -97,6 +97,14 @@ export class DataWrapper extends Uint8Array {
 }
 
 export class ReadonlyDataWrapper extends DataWrapper {
+    /** @internal For internal API interoperability */
+    static '@@unlock'(buffer: ReadonlyDataWrapper) {
+        return Object.defineProperty(buffer, 'buffer', {
+            configurable: true,
+            get() { return buffer['@@arraybuffer']; }
+        });
+    }
+
     readonly [k: number]: number;
     /** @internal For internal APIs */
     protected get '@@arraybuffer'(): ArrayBuffer { return super.buffer; }
