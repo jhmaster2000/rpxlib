@@ -1,7 +1,7 @@
 {
     "type": "module",
     "name": "rpxlib",
-    "version": "0.3.0-node.4",
+    "version": "0.3.0-node.5",
     "description": "A general purpose RPL/RPX library.",
     "main": "dist/main.js",
     "types": "dist/main.d.ts",
@@ -37,6 +37,7 @@
         "deeptest": "npm run lint && npm run test",
         "check": "npx tsc",
         "lint": "npx eslint src/**/*.ts",
-        "lint-fix": "npm run lint -- --fix"
+        "lint-fix": "npm run lint -- --fix",
+        "prepublishOnly": "rm -rf dist && npm run lint && npm run check && npx tsc -d"
     }
 }
