@@ -105,6 +105,14 @@ export class ReadonlyDataWrapper extends DataWrapper {
         });
     }
 
+    /** @internal For internal API interoperability */
+    static '@@lock'(buffer: ReadonlyDataWrapper) {
+        return Object.defineProperty(buffer, 'buffer', {
+            configurable: true,
+            get() { throw new Error('Cannot access writable ArrayBuffer of ReadonlyDataWrapper instance.'); }
+        });
+    }
+
     readonly [k: number]: number;
     /** @internal For internal APIs */
     protected get '@@arraybuffer'(): ArrayBuffer { return super.buffer; }
