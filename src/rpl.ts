@@ -109,7 +109,12 @@ export class RPL extends Header {
             } else {
                 datasink.write(compressedData ?? uncompressedData);
                 const ix = i * 4;
-                const crc = crc32(uncompressedData);
+                let crc: number;
+                if (uncompressedData instanceof ReadonlyDataWrapper) {
+                    ReadonlyDataWrapper['@@unlock'](uncompressedData);
+                    crc = crc32(uncompressedData);
+                    ReadonlyDataWrapper['@@lock'](uncompressedData);
+                } else crc = crc32(uncompressedData);
                 crcs[ix  ] = crc >> 24 & 0xFF;
                 crcs[ix+1] = crc >> 16 & 0xFF;
                 crcs[ix+2] = crc >>  8 & 0xFF;
