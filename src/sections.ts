@@ -116,9 +116,9 @@ export class Section extends Structs.Section {
 
     get crc32Hash(): uint32 {
         if (this.data instanceof ReadonlyDataWrapper) {
-            ReadonlyDataWrapper['@@unlock'](this.data);
-            const hash = new uint32(crc32(this.data));
-            ReadonlyDataWrapper['@@lock'](this.data);
+            const data = ReadonlyDataWrapper['@@unlock'](this.data);
+            const hash = new uint32(crc32(data));
+            ReadonlyDataWrapper['@@lock'](data);
             return hash;
         } else {
             return new uint32(this.hasData ? crc32(this.data!) : 0x00000000);
