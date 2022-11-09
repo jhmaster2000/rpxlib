@@ -158,7 +158,7 @@ export class NoBitsSection extends Section {
     override get size(): uint32 { return Reflect.get(this, 'storedSize') as uint32; }
     override set size(v: uint32) { Reflect.set(this, 'storedSize', v); }
     override get data(): null { return null; }
-    override get hasData(): boolean { return false; }
+    override get hasData(): false { return false; }
 }
 
 export class StringSection extends Section {
