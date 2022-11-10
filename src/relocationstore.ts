@@ -8,9 +8,13 @@ export class RelocationStore {
     /** Array of deleted relocations indexes */
     #deleted: number[] = [];
     #map: Map<number, RelocWithIndex> = new Map();
-    #data: DataWrapper;
+    readonly #data: DataWrapper;
 
-    constructor(data: DataWrapper, public readonly rela: boolean = true) {
+    constructor(data?: DataWrapper | null, public readonly rela: boolean = true) {
+        if (!data) {
+            this.#data = new DataWrapper(new Uint8Array(0));
+            return this;
+        }
         this.#data = data;
         const num = data.byteLength / this.entSize;
 
