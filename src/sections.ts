@@ -2,13 +2,13 @@ import { CodeBaseAddress, DataBaseAddress, LoadBaseAddress, uint32 } from './pri
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
 import { SectionFlags, SectionType } from './enums.js';
 import { StringStore } from './stringstore.js';
-import { Relocation } from './relocation.js';
 import { ELFSymbol } from './symbol.js';
 import { Structs } from './structs.js';
 import { crc32 } from '@foxglove/crc';
 import { RPL } from './rpl.js';
 import Util from './util.js';
 import zlib from 'zlib';
+import { RelocationStore } from './relocationstore.js';
 
 const SPECIAL_SECTIONS_STRINGS: Record<number, string> = {
     0x00000002: 'Symbol Table',
@@ -239,33 +239,24 @@ export class SymbolSection extends Section {
 
 export class RelocationSection extends Section {
     constructor(
-        inputdata: DataWrapper | Omit<Structs.SectionValues, 'type'> & { relocations?: Relocation[], type: SectionType.Rel | SectionType.Rela },
+        inputdata: DataWrapper | Omit<Structs.SectionValues, 'type'> & { relocations?: RelocationStore, type: SectionType.Rel | SectionType.Rela },
         rpx: RPL, parseRelocs = false
     ) {
         if (!(inputdata instanceof DataWrapper)) {
             Reflect.set(inputdata, 'fromSuper', true);
             super(inputdata, rpx);
             this.parsed = true;
-            this.relocations = inputdata.relocations ?? [];
+            this.relocations = inputdata.relocations ?? new RelocationStore(null, +inputdata.type === SectionType.Rela);
+            if (
+                this.relocations.rela && +inputdata.type !== SectionType.Rela ||
+                !this.relocations.rela && +inputdata.type !== SectionType.Rel
+            ) throw new Error('Requested relocation section type and provided relocations type mismatch.');
             return this;
         }
         super(inputdata, rpx);
         if (!super.hasData) throw new Error('Relocation section cannot be empty.');
         this.parsed = parseRelocs;
-        this.relocations = [];
-        if (!parseRelocs) return this;
-
-        const data = new DataWrapper(super.data!);
-        const num = super.data!.byteLength / (<number>this.entSize);
-
-        for (let i = 0; i < num; i++) {
-            const relocation = new Relocation();
-            relocation.addr = data.passUint32();
-            relocation.info = data.passUint32();
-            if (+this.type === SectionType.Rela) relocation.addend = data.passInt32();
-
-            this.relocations[i] = relocation;
-        }
+        this.relocations = new RelocationStore(parseRelocs ? new DataWrapper(super.data!) : null, +this.type === SectionType.Rela);
     }
 
     override set data(value: Uint8Array) {
@@ -274,23 +265,17 @@ export class RelocationSection extends Section {
     }
     override get data(): ReadonlyDataWrapper {
         if (!this.parsed) return new ReadonlyDataWrapper(super.data!);
-        const buffer = new DataWrapper(Buffer.allocUnsafe(<number>this.entSize * this.relocations.length));
-        for (const reloc of this.relocations) {
-            buffer.dropUint32(reloc.addr);
-            buffer.dropUint32(reloc.info);
-            if (+this.type === SectionType.Rela) buffer.dropInt32(reloc.addend!);
-        }
-        return new ReadonlyDataWrapper(buffer);
+        else return new ReadonlyDataWrapper(this.relocations.buffer);
     }
     override get hasData(): true {
         return true;
     }
     override get size(): uint32 {
-        return new uint32(this.parsed ? <number>this.entSize * this.relocations.length : super.data!.byteLength);
+        return new uint32(this.parsed ? this.relocations.size : super.data!.byteLength);
     }
 
     parsed: boolean;
-    relocations: Relocation[];
+    relocations: RelocationStore;
 }
 
 export class RPLCrcSection extends Section {
