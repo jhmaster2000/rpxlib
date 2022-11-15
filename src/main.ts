@@ -10,5 +10,4 @@ export * from './sections.js';
 export * from './stringstore.js';
 export * from './structs.js';
 export * from './symbol.js';
-export * from './wslsafepath.js';
 export { default as Util } from './util.js';
