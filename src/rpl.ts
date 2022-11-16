@@ -91,7 +91,7 @@ export class RPL extends Header {
 
         const fileinfoSection = (<RPLFileInfoSection>this.#sections.find(s => s instanceof RPLFileInfoSection));
         if (compression === true) compression = <CompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
-        else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? -1 : compression);
+        else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? 0 : compression);
 
         options.compressAsPossible ??= false;
 
@@ -102,13 +102,13 @@ export class RPL extends Header {
 
         /** If uncompressedData is `true`, the section is considered the RPLCrcSection */
         const writeSectionDataAndCRC = (i: number, offset: number, uncompressedData: Uint8Array | true, compressedData?: Uint8Array): void => {
+            const ix = i * 4;
             if (uncompressedData === true) {
                 crcsOffset = offset;
-                const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
+                crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
                 datasink.write(Buffer.allocUnsafe(this.#sections.length * 4 /* Section.entSize */));
             } else {
                 datasink.write(compressedData ?? uncompressedData);
-                const ix = i * 4;
                 let crc: number;
                 if (uncompressedData instanceof ReadonlyDataWrapper) {
                     ReadonlyDataWrapper['@@unlock'](uncompressedData);
@@ -184,7 +184,7 @@ export class RPL extends Header {
                     if (section.hasData) {
                         currOffset += <number>sectionSize;
                         writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
-                    }
+                    } else { const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00; }
                 }
             }
 
