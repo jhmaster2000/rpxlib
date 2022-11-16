@@ -63,9 +63,8 @@ export class RPL extends Header {
      * - `true` uses the level in the RPL File Info section or `-1` if there isn't one.
      * - `-1` uses the default zlib compression level of `6`.
      * - `0` disables compression but still wraps the data in a zlib header and footer.
-     * @returns The absolute path the output file was saved to.
      */
-    save(filepath: string, compression: boolean | CompressionLevel = false, options: RPLSaveOptions = {}): string {
+    save(filepath: string, compression: boolean | CompressionLevel = false, options: RPLSaveOptions = {}) {
         const headers = new DataWrapper(Buffer.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
@@ -202,13 +201,12 @@ export class RPL extends Header {
             headers.dropUint32(section.entSize);
         }
 
-        const file = Buffer.concat([headers, new Uint8Array(datasink.end())]);
+        const file = Buffer.concat([headers, datasink.end(), Buffer.alloc(1)]);
         if (crcsOffset !== 0) file.set(crcs, crcsOffset);
 
         filepath = Util.resolve(`${filepath}.${compression === false ? 'elf' : 'rpx'}`);
         fs.writeFileSync(filepath, file);
-        fs.appendFileSync(filepath, '\0');
-        return filepath;
+        return { filepath, filedata: file };
     }
 
     #sections: Section[];
