@@ -157,14 +157,14 @@ export class RPL extends Header {
                         );
                     } else {
                         const data = section.data!;
-                        const uncompressed = data instanceof ReadonlyDataWrapper ? new Uint8Array(data['@@arraybuffer']) : data;
+                        const uncompressed = data instanceof ReadonlyDataWrapper
+                            ? new Uint8Array(data['@@arraybuffer'], data.byteOffset, data.byteLength)
+                            : data;
                         const compressed = Buffer.concat([
                             Buffer.allocUnsafe(4),
                             zlib.deflateSync(uncompressed, { level: compression })
                         ]);
                         compressed.writeUint32BE(uncompressed.byteLength, 0);
-
-                        console.debug(`(debug) Compressed section ${section.name} from ${uncompressed.byteLength} to ${compressed.byteLength}`);
 
                         if (compression !== 0 && compressed.byteLength >= uncompressed.byteLength) {
                             (<number>section.flags) &= ~SectionFlags.Compressed;
