@@ -31,12 +31,16 @@ export class StringStore {
     get buffer(): Uint8Array {
         const buffer = Buffer.allocUnsafe(this.size);
         const encoder = new TextEncoder();
+        console.debug(`(strstorebuffer) allocated buffer of size ${buffer.byteLength}`);
         for (const key in this) {
             const keyn = +key;
             if (keyn !== keyn) continue;
             const thiskey = this[keyn] ?? '';
             const encoded = Buffer.allocUnsafe(thiskey.length + 1);
             encoder.encodeInto(thiskey + '\0', encoded);
+            console.debug(
+                `(strstore) Writing string "${this[key]!}" (encoded size: ${encoded.byteLength}) at offset 0x${(keyn - this.#dataOffset).toString(16).toUpperCase()}`
+            );
             buffer.set(encoded, keyn - this.#dataOffset);
         }
         return buffer;
@@ -67,8 +71,8 @@ export class StringStore {
     }
     add(str: string): number {
         const strings = this as WritableStringStore;
-        const lastOffset = Object.keys(strings).map(x => +x).filter(x => x === x).sort((a, b) => b - a)[0] ?? 0;
-        const nextOffset = lastOffset + (strings[lastOffset]?.length ?? 0) + 1;
+        const lastOffset = Object.keys(strings).map(x => +x).filter(x => x === x).sort((a, b) => b - a)[0];
+        const nextOffset = lastOffset === undefined ? 0 : lastOffset + strings[lastOffset]!.length + 1;
         strings[nextOffset] = str;
         return nextOffset;
     }
