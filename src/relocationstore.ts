@@ -43,7 +43,7 @@ export class RelocationStore {
     /** All of the RelocationStore's relocations as a buffer. */
     get buffer(): Uint8Array {
         let pos = 0;
-        const dw = new DataWrapper(new Uint8Array(this.size));
+        const dw = new DataWrapper(Buffer.allocUnsafe(this.size));
         const sorted = this.#deleted.sort((a, b) => a - b);
         for (let i = 0; i < sorted.length; i++) {
             const deleted = sorted[i]! * this.entSize;
