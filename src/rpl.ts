@@ -123,7 +123,7 @@ export class RPL extends Header {
         };
 
         for (let i = 0; i < this.#sections.length; i++) {
-            const section = this.#sections[i];
+            const section = this.#sections[i]!;
             const sectionOffset: number = section.hasData ? currOffset : 0;
             let sectionSize: number | uint32;
 
@@ -163,6 +163,8 @@ export class RPL extends Header {
                             zlib.deflateSync(uncompressed, { level: compression })
                         ]);
                         compressed.writeUint32BE(uncompressed.byteLength, 0);
+
+                        console.debug(`(debug) Compressed section ${section.name} from ${uncompressed.byteLength} to ${compressed.byteLength}`);
 
                         if (compression !== 0 && compressed.byteLength >= uncompressed.byteLength) {
                             (<number>section.flags) &= ~SectionFlags.Compressed;
@@ -239,7 +241,7 @@ export class RPL extends Header {
         let last = 0;
         let free: [number, number][] = [];
         used.forEach(([start, end], i) => {
-            if (last > start) { last = start; used[i-1][1] = last; }
+            if (last > start) { last = start; used[i-1]![1] = last; }
             if (last === start) return last = end;
             if (start - 1 - last < 0x40) return last = end;
             free.push([last, start - 1]);

@@ -8,26 +8,26 @@ export class DataWrapper extends Uint8Array {
         return new uint8(this[this.pos++]);
     }
     passUint16(): uint16 {
-        const v = this[this.pos] << 8 | this[this.pos+1];
+        const v = this[this.pos]! << 8 | this[this.pos+1]!;
         this.pos += 2;
         return new uint16(v);
     }
     passUint32(): uint32 {
-        const v = this[this.pos] << 24 | this[this.pos+1] << 16 | this[this.pos+2] << 8 | this[this.pos+3];
+        const v = this[this.pos]! << 24 | this[this.pos+1]! << 16 | this[this.pos+2]! << 8 | this[this.pos+3]!;
         this.pos += 4;
         return new uint32(v);
     }
     passInt8(): sint8 {
-        const v = this[this.pos++];
-        return v & 0x80 ? (0xFF - v + 1) * -1 : v;
+        const v = this[this.pos++]!;
+        return new sint8(v & 0x80 ? (0xFF - v + 1) * -1 : v);
     }
     passInt16(): sint16 {
-        const v = this[this.pos] << 8 | this[this.pos+1];
+        const v = this[this.pos]! << 8 | this[this.pos+1]!;
         this.pos += 2;
         return new sint16((v & 0x8000) ? v | 0xFFFF0000 : v);
     }
     passInt32(): sint32 {
-        const v = this[this.pos] << 24 | this[this.pos+1] << 16 | this[this.pos+2] << 8 | this[this.pos+3];
+        const v = this[this.pos]! << 24 | this[this.pos+1]! << 16 | this[this.pos+2]! << 8 | this[this.pos+3]!;
         this.pos += 4;
         return new sint32(v);
     }
@@ -78,15 +78,15 @@ export class DataWrapper extends Uint8Array {
     swap16(): DataWrapper {
         const len = this.length;
         if (len % 2 !== 0) throw new RangeError('Buffer size must be a multiple of 16-bits');
-        for (let i = 0, x; i < len; i += 2) { x = this[i]; this[i] = this[i + 1]; this[i + 1] = x; }
+        for (let i = 0, x; i < len; i += 2) { x = this[i]!; this[i] = this[i + 1]!; this[i + 1] = x; }
         return this;
     }
     swap32(): DataWrapper {
         const len = this.length;
         if (len % 4 !== 0) throw new RangeError('Buffer size must be a multiple of 32-bits');
         for (let i = 0, x; i < len; i += 4) {
-            x = this[i]; this[i] = this[i + 3]; this[i + 3] = x;
-            x = this[i + 1]; this[i + 1] = this[i + 2]; this[i + 2] = x;
+            x = this[i]!; this[i] = this[i + 3]!; this[i + 3] = x;
+            x = this[i + 1]!; this[i + 1] = this[i + 2]!; this[i + 2] = x;
         }
         return this;
     }

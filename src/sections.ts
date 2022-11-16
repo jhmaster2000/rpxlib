@@ -29,7 +29,7 @@ export class Section extends Structs.Section {
         this.rpx = rpx;
         if (!(inputdata instanceof DataWrapper)) {
             if (SPECIAL_SECTIONS.includes(+inputdata.type) && !Reflect.get(inputdata, 'fromSuper'))
-                throw new TypeError(`Special section of type ${SPECIAL_SECTIONS_STRINGS[+inputdata.type]} must be constructed with its dedicated constructor.`);
+                throw new TypeError(`Special section of type ${SPECIAL_SECTIONS_STRINGS[+inputdata.type]!} must be constructed with its dedicated constructor.`);
             this.nameOffset = new uint32(inputdata.nameOffset);
             this.type = new uint32(inputdata.type) as SectionType;
             this.flags = new uint32(inputdata.flags);
@@ -306,7 +306,7 @@ export class RPLCrcSection extends Section {
     /** @warning This will trigger the data generation of all sections. **SLOW** */
     get crcs() {
         const hashes: uint32[] = [];
-        for (let i = 0; i < this.rpx.sections.length; i++) hashes.push(this.rpx.sections[i].crc32Hash);
+        for (let i = 0; i < this.rpx.sections.length; i++) hashes.push(this.rpx.sections[i]!.crc32Hash);
         return hashes;
     }
 }

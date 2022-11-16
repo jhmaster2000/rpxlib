@@ -23,7 +23,7 @@ export class StringStore {
         let sz = 0;
         for (const key in this) {
             if (isNaN(<number><unknown>key)) continue;
-            sz += this[key].length + 1;
+            sz += (this[key] ?? '').length + 1;
         }
         return sz;
     }
@@ -34,8 +34,9 @@ export class StringStore {
         for (const key in this) {
             const keyn = +key;
             if (keyn !== keyn) continue;
-            const encoded = Buffer.allocUnsafe(this[key].length + 1);
-            encoder.encodeInto(this[key] + '\0', encoded);
+            const thiskey = this[keyn] ?? '';
+            const encoded = Buffer.allocUnsafe(thiskey.length + 1);
+            encoder.encodeInto(thiskey + '\0', encoded);
             buffer.set(encoded, keyn - this.#dataOffset);
         }
         return buffer;
@@ -47,7 +48,7 @@ export class StringStore {
             for (const key in this) {
                 const keyn = +key;
                 if (keyn < offset) {
-                    const keynStr = this[keyn];
+                    const keynStr = this[keyn] ?? '';
                     if (keyn + keynStr.length > offset) {
                         str = keynStr.slice(<number>offset - keyn); break;
                     }
@@ -59,15 +60,15 @@ export class StringStore {
     set(offset: number | int, str: string): void {
         const strings = this as WritableStringStore;
         offset = +offset;
-        if (!strings[(<number>offset)]) throw new Error(`Offset 0x${offset.toString(16).toUpperCase()} points to the middle of a string or out of bounds.`);
         const original = strings[(<number>offset)];
+        if (!original) throw new Error(`Offset 0x${offset.toString(16).toUpperCase()} points to the middle of a string or out of bounds.`);
         if (str.length > original.length) throw new Error(`Cannot write new string of length ${str.length} over original string of length ${original.length}`);
         strings[(<number>offset)] = str.padEnd(original.length, '\0');
     }
     add(str: string): number {
         const strings = this as WritableStringStore;
-        const lastOffset = Object.keys(strings).map(x => +x).filter(x => x === x).sort((a, b) => b - a)[0];
-        const nextOffset = lastOffset + strings[lastOffset].length + 1;
+        const lastOffset = Object.keys(strings).map(x => +x).filter(x => x === x).sort((a, b) => b - a)[0] ?? 0;
+        const nextOffset = lastOffset + (strings[lastOffset]?.length ?? 0) + 1;
         strings[nextOffset] = str;
         return nextOffset;
     }

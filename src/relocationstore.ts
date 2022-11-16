@@ -46,7 +46,7 @@ export class RelocationStore {
         const dw = new DataWrapper(new Uint8Array(this.size));
         const sorted = this.#deleted.sort((a, b) => a - b);
         for (let i = 0; i < sorted.length; i++) {
-            const deleted = sorted[i] * this.entSize;
+            const deleted = sorted[i]! * this.entSize;
             if (pos === deleted) {
                 // skip sequential deletions
                 pos += this.entSize;
