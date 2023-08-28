@@ -4,7 +4,7 @@ import Util from './util.js';
 import { crc32 } from '@foxglove/crc';
 import { Header } from './header.js';
 import { DataSink } from './datasink.js';
-import { SectionFlags, SectionType } from './enums.js';
+import { SectionFlags, SectionType, Type } from './enums.js';
 import { sint32, uint16, uint32 } from './primitives.js';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
 import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
@@ -88,9 +88,12 @@ export class RPL extends Header {
         headers.dropUint16(this.shstrIndex);
         headers.zerofill(<number>this.sectionHeadersOffset - <number>this.headerSize); //? padding
 
-        const fileinfoSection = (<RPLFileInfoSection>this.#sections.find(s => s instanceof RPLFileInfoSection));
-        if (compression === true) compression = <CompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
-        else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? 0 : compression);
+        if (+this.type === Type.RPL) {
+            const fileinfoSection = (<RPLFileInfoSection | undefined>this.#sections.find(s => s instanceof RPLFileInfoSection));
+            if (!fileinfoSection) throw new Error('Cannot save RPL, no RPL File Info section found.');
+            if (compression === true) compression = <CompressionLevel>+fileinfoSection?.fileinfo?.compressionLevel ?? -1;
+            else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? 0 : compression);
+        } else if (compression === true) compression = -1;
 
         options.compressAsPossible ??= false;
 
@@ -108,16 +111,18 @@ export class RPL extends Header {
                 datasink.write(Buffer.allocUnsafe(this.#sections.length * 4 /* Section.entSize */));
             } else {
                 datasink.write(compressedData ?? uncompressedData);
-                let crc: number;
-                if (uncompressedData instanceof ReadonlyDataWrapper) {
-                    ReadonlyDataWrapper['@@unlock'](uncompressedData);
-                    crc = crc32(uncompressedData);
-                    ReadonlyDataWrapper['@@lock'](uncompressedData);
-                } else crc = crc32(uncompressedData);
-                crcs[ix  ] = crc >> 24 & 0xFF;
-                crcs[ix+1] = crc >> 16 & 0xFF;
-                crcs[ix+2] = crc >>  8 & 0xFF;
-                crcs[ix+3] = crc       & 0xFF;
+                if (+this.type === Type.RPL) {
+                    let crc: number;
+                    if (uncompressedData instanceof ReadonlyDataWrapper) {
+                        ReadonlyDataWrapper['@@unlock'](uncompressedData);
+                        crc = crc32(uncompressedData);
+                        ReadonlyDataWrapper['@@lock'](uncompressedData);
+                    } else crc = crc32(uncompressedData);
+                    crcs[ix  ] = crc >> 24 & 0xFF;
+                    crcs[ix+1] = crc >> 16 & 0xFF;
+                    crcs[ix+2] = crc >>  8 & 0xFF;
+                    crcs[ix+3] = crc       & 0xFF;
+                }
             }
         };
 
@@ -202,9 +207,9 @@ export class RPL extends Header {
         }
 
         const file = Buffer.concat([headers, datasink.end(), Buffer.alloc(1)]);
-        if (crcsOffset !== 0) file.set(crcs, crcsOffset);
+        if (+this.type === Type.RPL && crcsOffset !== 0) file.set(crcs, crcsOffset);
 
-        filepath = Util.resolve(`${filepath}.${compression === false ? 'elf' : 'rpx'}`);
+        filepath = Util.resolve(+this.type !== Type.RPL ? filepath : `${filepath}.${compression === false ? 'elf' : 'rpx'}`);
         fs.writeFileSync(filepath, file);
         return { filepath, filedata: file };
     }
@@ -261,10 +266,21 @@ export class RPL extends Header {
     }
 
     pushSection(section: Section) {
-        const fileinfo = this.#sections.pop()!;
-        const crcs = this.#sections.pop()!;
         Reflect.set(section, 'rpx', this);
-        this.#sections.push(section, crcs, fileinfo);
+        if (+this.type === Type.RPL) {
+            const fileinfo = this.#sections.pop()!;
+            const crcs = this.#sections.pop()!;
+            this.#sections.push(section, crcs, fileinfo);
+        } else {
+            this.#sections.push(section);
+        }
         return section;
+    }
+
+    removeSection(section: Section) {
+        if (this.#sections.includes(section)) {
+            Reflect.deleteProperty(section, 'rpx');
+            this.#sections.splice(this.#sections.indexOf(section), 1);
+        }
     }
 }
