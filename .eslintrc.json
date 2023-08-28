@@ -63,6 +63,7 @@
         "array-callback-return": ["error", { "allowImplicit": true }],
         "indent": ["error", 4, { "SwitchCase": 1 }],
         "semi": ["error", "always"],
+        "@typescript-eslint/no-unsafe-enum-comparison": "off",
         "@typescript-eslint/no-namespace": "off",
         "@typescript-eslint/unbound-method": "off",
         "@typescript-eslint/no-non-null-assertion": "off",

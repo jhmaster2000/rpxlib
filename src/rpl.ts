@@ -35,7 +35,7 @@ export class RPL extends Header {
         this.#sections = new Array(<number>this._sectionHeadersEntryCount) as Section[];
         file.pos = +this.sectionHeadersOffset;
 
-        for (let i = 0; i < this._sectionHeadersEntryCount; i++) {
+        for (let i = 0; i < +this._sectionHeadersEntryCount; i++) {
             file.pos += 4;
             const sectionType: SectionType = +file.passUint32();
             file.pos -= 8;

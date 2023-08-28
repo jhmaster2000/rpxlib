@@ -1,6 +1,6 @@
 import { ABI, Class, Endian, ISA, SectionFlags, SectionType, SymbolBinding, SymbolType, SymbolVisibility, Type, Version } from './enums.js';
 import { RelocationSection, RPLCrcSection, RPLFileInfoSection, StringSection, SymbolSection } from './sections.js';
-import { int, sint16, sint32, sint8, uint32 } from './primitives.js';
+import { type int, sint16, sint32, sint8, uint32 } from './primitives.js';
 import { RPL } from './rpl.js';
 
 function log<T>(label: string, value: T, formatter: (v: T) => string = String, parenFormatter?: (v: T) => string, endline = true) {
@@ -18,7 +18,7 @@ const hex32 = (v: number | int) => hex(v, 8);
 
 const hexSInt = (bits: 4 | 8 | 16 | 24 | 32, num: number | sint8 | sint16 | sint32) => {
     num = +num;
-    if (num < 0) num = ((0x100 ** (bits / 8)) - 1) + <number>num + 1;
+    if (num as number < 0) num = ((0x100 ** (bits / 8)) - 1) + <number>num + 1;
     return '0x'+num.toString(16).toUpperCase().padStart(bits / 4, '0');
 };
 

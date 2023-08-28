@@ -359,7 +359,7 @@ export class RPLFileInfoSection extends Section {
 
         // Section does not have strings
         // NOTE: Silently ignoring string offset out of bounds for now
-        if (super.data!.byteLength === 0x60 || this.fileinfo.stringsOffset < 0x60 || super.data!.byteLength <= this.fileinfo.stringsOffset) {
+        if (super.data!.byteLength === 0x60 || +this.fileinfo.stringsOffset < 0x60 || super.data!.byteLength <= +this.fileinfo.stringsOffset) {
             this.strings = new StringStore();
             return this;
         }
@@ -414,14 +414,15 @@ export class RPLFileInfoSection extends Section {
         const info = { textSize: 0, dataSize: 0, loadSize: 0, tempSize: 0 };
 
         for (const section of this.rpx.sections) {
-            let size = +section.size;
-            if (section.addr >= CodeBaseAddress && section.addr < DataBaseAddress) {
+            const size = +section.size;
+            const addr = +section.addr;
+            if (addr >= CodeBaseAddress && addr < DataBaseAddress) {
                 const val = +section.addr + +section.size - CodeBaseAddress;
                 if (val > info.textSize) info.textSize = val;
-            } else if (section.addr >= DataBaseAddress && section.addr < LoadBaseAddress) {
+            } else if (addr >= DataBaseAddress && addr < LoadBaseAddress) {
                 const val = +section.addr + +section.size - DataBaseAddress;
                 if (val > info.dataSize) info.dataSize = val;
-            } else if (section.addr >= LoadBaseAddress) {
+            } else if (addr >= LoadBaseAddress) {
                 const val = +section.addr + +section.size - LoadBaseAddress;
                 if (val > info.loadSize) info.loadSize = val;
             } else if (+section.addr === 0 && +section.type !== SectionType.RPLCrcs && +section.type !== SectionType.RPLFileInfo) {

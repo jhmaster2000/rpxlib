@@ -1,4 +1,4 @@
-import { int } from './primitives.js';
+import type { int } from './primitives.js';
 
 /** @internal */
 type WritableStringStore = StringStore & { [offset: number]: string };
@@ -41,16 +41,16 @@ export class StringStore {
         }
         return buffer;
     }
-    get(offset: number | int): string {
-        offset = +offset;
-        let str = this[(<number>offset)];
+    get(offsetArg: number | int): string {
+        const offset: number = +offsetArg;
+        let str = this[offset];
         if (!str) {
             for (const key in this) {
                 const keyn = +key;
                 if (keyn < offset) {
                     const keynStr = this[keyn] ?? '';
                     if (keyn + keynStr.length > offset) {
-                        str = keynStr.slice(<number>offset - keyn); break;
+                        str = keynStr.slice(offset - keyn); break;
                     }
                 }
             }
