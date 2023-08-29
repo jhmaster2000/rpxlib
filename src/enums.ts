@@ -71,9 +71,10 @@ export enum ProgramType {
 
 /** Program header flags //! uint32 */
 export enum ProgramFlags {
-    Executable      = 0x00000001,
-    Write           = 0x00000002,
-    Read            = 0x00000004,
+    None          = 0x00000000,
+    Executable    = 0x00000001,
+    Write         = 0x00000002,
+    Read          = 0x00000004,
 }
 
 /** The type of section (section header entry). //! uint32 */

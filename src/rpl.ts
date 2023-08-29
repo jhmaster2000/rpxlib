@@ -4,8 +4,8 @@ import Util from './util.js';
 import { crc32 } from '@foxglove/crc';
 import { Header } from './header.js';
 import { DataSink } from './datasink.js';
-import { SectionFlags, SectionType, Type } from './enums.js';
-import { sint32, uint16, uint32 } from './primitives.js';
+import { ABI, ISA, SectionFlags, SectionType, Type } from './enums.js';
+import { sint32, uint16, uint32, uint8 } from './primitives.js';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
 import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
 import { Program } from './programs.js';
@@ -72,6 +72,38 @@ export class RPL extends Header {
     }
 
     /**
+     * Create a blank ELF file from scratch. The file is created in a header-only state.
+     * 
+     * Creation of boilerplate sections such as .shstrtab or special RPL sections must be done manually.
+     * Failure to do so properly will result in an invalid file that cannot be saved.
+     */
+    static create(type: Type, {
+        abi = [ABI.SystemV, 0],
+        isa = [ISA.None, 0]
+    }: {
+        abi?: [ABI, uint8],
+        isa?: [ISA, uint32]
+    } = {}) {
+        const data = new Uint8Array([
+            0x7F, 0x45, 0x4C, 0x46, // magic
+            0x01, 0x02, 0x01, // class, endian, version
+            +abi[0], +abi[1], // abi, abiVersion
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //? padding
+            type >> 8, type & 0xFF, // type
+            isa[0] >> 8, isa[0] & 0xFF, // isa
+            +isa[1] >> 24 & 0xFF, +isa[1] >> 16 & 0xFF, +isa[1] >> 8 & 0xFF, +isa[1] & 0xFF, // isaVersion
+            0x00, 0x00, 0x00, 0x00, // entryPoint
+            0x00, 0x00, 0x00, 0x00, // programHeadersOffset
+            0x00, 0x00, 0x00, 0x00, // sectionHeadersOffset
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x34, // isaFlags, headerSize
+            0x00, 0x20, 0x00, 0x00, // programHeadersEntrySize, programHeadersEntryCount
+            0x00, 0x28, 0x00, 0x00, // sectionHeadersEntrySize, sectionHeadersEntryCount
+            0x00, 0x00 // shstrIndex
+        ]);
+        return new RPL(data);
+    }
+
+    /**
      * Saves the RPL/RPX to a file.
      * @param filepath The path to the output file without an extension.
      * The extension will be automatically determined based on the `compression` argument.
@@ -109,13 +141,13 @@ export class RPL extends Header {
         headers.dropUint16(this.isa);
         headers.dropUint32(this.isaVersion);
         headers.dropUint32(this.entryPoint);
-        headers.dropUint32(0 /*this.programHeadersOffset*/);
-        headers.dropUint32(this.headerSize /*this.sectionHeadersOffset*/);
+        headers.dropUint32(/*this.#programs.length &&*/ 0); // programHeadersOffset
+        headers.dropUint32(this.#sections.length && this.headerSize); // sectionHeadersOffset
         headers.dropUint32(this.isaFlags);
         headers.dropUint16(this.headerSize);
-        headers.dropUint16(0 /*this.programHeadersEntrySize*/);
+        headers.dropUint16(/*this.#programs.length && 0x20*/ 0); // programHeadersEntrySize
         headers.dropUint16(0 /*this.programHeadersEntryCount*/);
-        headers.dropUint16(this.sectionHeadersEntrySize);
+        headers.dropUint16(this.#sections.length && 0x28); // sectionHeadersEntrySize
         headers.dropUint16(this.sectionHeadersEntryCount);
         headers.dropUint16(this.shstrIndex);
         //headers.zerofill(); //? padding
