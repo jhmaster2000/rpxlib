@@ -319,10 +319,58 @@ export class RPL extends Header {
         return section;
     }
 
-    removeSection(section: Section) {
-        if (this.#sections.includes(section)) {
-            Reflect.deleteProperty(section, 'rpx');
-            this.#sections.splice(this.#sections.indexOf(section), 1);
+    // TODO: it shouldn't leave the file in an invalid state if it throws
+    /**
+     * RPXLib attempts to be as safe and prevent removing sections that are required or referenced by other sections,
+     * but it's not perfect and it may be possible to remove a section that is referenced by another section through means that RPXLib doesn't check for.
+     * 
+     * Usage of this method takes responsibility for any issues that may arise from removing a section that is referenced by another section.
+     * RPXLib will no longer be able to guarantee the validity of the file after this method is used.
+     * 
+     * **Important**: This method may throw on error, if it does, the file will be left in an invalid state and should no longer be used.
+     * 
+     * @param section The section to remove.
+     * @param stubMode If `true`, RPXLib will simply stub over the section with a null section instead of removing it.
+     * This is useful for avoiding shifting section indices.
+     */
+    removeSection(section: Section, stubMode = false) {
+        if (!this.#sections.includes(section)) throw new Error('Cannot remove section, it does not belong to this file or is not a section.');
+        if (section === this.shstrSection) throw new Error('Cannot remove section, it is the section headers string table.');
+        if (+this.type === Type.RPL) {
+            if (section === this.crcSection) throw new Error('Cannot remove section, it is the RPL CRCs section.');
+            if (section === this.fileinfoSection) throw new Error('Cannot remove section, it is the RPL File Info section.');
         }
+
+        for (let i = 0; i < this.#sections.length; i++) {
+            const sect = this.#sections[i]!;
+            if (sect.linkedSection === section) {
+                throw new Error(`Cannot remove section, it is linked to by section #${i} (${sect.name}).`);
+            }
+            if (sect instanceof RelocationSection) {
+                if (+sect.info === section.index) {
+                    throw new Error(`Cannot remove section, it is referenced by relocation section #${i} (${sect.name}).`);
+                }
+                if (!stubMode && +sect.info > section.index) sect.info = new uint32(+sect.info - 1);
+            }
+            else if (sect instanceof SymbolSection) {
+                for (let si = 0; si < sect.symbols.length; si++) {
+                    const sym = sect.symbols[si]!;
+                    if (section.index && +sym.shndx === section.index) {
+                        throw new Error(`Cannot remove section, it is referenced by symbol #${si} (${sym.name}) in section #${sect.index} (${sect.name}).`);
+                    }
+                    if (!stubMode && +sym.shndx > section.index) sym.shndx = new uint16(+sym.shndx - 1);
+                }
+            }
+
+            if (!stubMode && +sect.link > section.index) sect.link = new uint32(+sect.link - 1);
+        }
+
+        if (!stubMode) {
+            this.shstrIndex = <number>this._shstrIndex - 1;
+            this.#sections.splice(this.#sections.indexOf(section), 1);
+        } else {
+            this.#sections[section.index] = new Section(new DataWrapper(new Uint8Array(0x28)), this);
+        }
+        Reflect.deleteProperty(section, 'rpx');
     }
 }
