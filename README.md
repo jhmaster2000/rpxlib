@@ -1,6 +1,13 @@
 # RPXLib
-
 A general purpose RPL/RPX library.
+
+[![GitHub version][github-image]][github-url]
+[![downloads][downloads-image]][npm-url]
+[![GitHub code size in bytes][size-image]][github-url]
+
+[![npm release][npm-image]][npm-url]
+[![node-current][node-image]][node-url]
+[![license][license-image]][license-url]
 
 * Single dependency
 * Reading and writing support
@@ -33,4 +40,15 @@ rpx.save('./path/to/save/file', true);
     * The parsed data of special sections will be serialized and overwrite the raw data upon each request to read the raw data.
         * For this reason it's highly recommended to not repeatedly call `Section.data` without need as you will be repeatedly regenerating the data for special sections.
         * It's also highly recommended to use `Section.size` over `Section.data.byteLength`, as the former does not require the generation of the entire raw section data for special sections.
-* Segment headers and data are not parsed since RPL/RPX files are not known to use those.
+* Program headers (segments) are parsed as read-only without data references and cannot be saved back.
+
+[github-url]:https://github.com/jhmaster2000/rpxlib
+[github-image]:https://img.shields.io/github/package-json/v/jhmaster2000/rpxlib.svg
+[license-url]:https://github.com/jhmaster2000/rpxlib/blob/master/LICENSE.md
+[license-image]:https://img.shields.io/npm/l/rpxlib.svg
+[npm-url]:http://npmjs.org/package/rpxlib
+[npm-image]:https://img.shields.io/npm/v/rpxlib.svg?color=darkred&label=npm%20release
+[downloads-image]:https://img.shields.io/npm/dt/rpxlib.svg
+[node-url]:https://nodejs.org/en/download
+[node-image]:https://img.shields.io/node/v/rpxlib.svg
+[size-image]:https://img.shields.io/github/languages/code-size/jhmaster2000/rpxlib.svg

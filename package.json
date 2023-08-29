@@ -1,7 +1,7 @@
 {
     "type": "module",
     "name": "rpxlib",
-    "version": "0.5.1",
+    "version": "0.6.0",
     "description": "A general purpose RPL/RPX library.",
     "main": "dist/main.js",
     "types": "dist/main.d.ts",
@@ -20,9 +20,9 @@
         "url": "https://github.com/jhmaster2000/rpxlib"
     },
     "devDependencies": {
-        "@types/node": "^20.5.6",
-        "@typescript-eslint/eslint-plugin": "^6.4.1",
-        "@typescript-eslint/parser": "^6.4.1",
+        "@types/node": "^20.5.7",
+        "@typescript-eslint/eslint-plugin": "^6.5.0",
+        "@typescript-eslint/parser": "^6.5.0",
         "eslint": "^8.48.0",
         "eslint-plugin-deprecation": "^1.5.0",
         "eslint-plugin-unicorn": "^48.0.1",
@@ -30,6 +30,9 @@
     },
     "dependencies": {
         "@foxglove/crc": "^0.0.3"
+    },
+    "engines": {
+        "node": ">=20.2.0"
     },
     "scripts": {
         "start": "node dist/main.js",
