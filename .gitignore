@@ -5,3 +5,4 @@ dist
 *.elf
 *.rpl
 *.rpx
+*.o

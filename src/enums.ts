@@ -44,39 +44,36 @@ export enum ProgramType {
     Null                     = 0x00000000,
     Load                     = 0x00000001,
     Dynamic                  = 0x00000002,
-    Inerp                    = 0x00000003,
+    Interp                   = 0x00000003,
     Note                     = 0x00000004,
     ShLib                    = 0x00000005,
     Phdr                     = 0x00000006,
     TLS                      = 0x00000007,
-    Num                      = 0x00000008,
-    Loos                     = 0x60000000,
+    LoOS                     = 0x60000000,
     GNUEhFrame               = 0x6474E550,
     GNUStack                 = 0x6474E551,
-    GNURelro                 = 0x6474E552,
-    Losunw_or_Sunwbss        = 0x6FFFFFFA,
-    Sunwstack                = 0x6FFFFFFB,
-    Hisunw_or_Hios           = 0x6FFFFFFF,
+    GNURelRo                 = 0x6474E552,
+    LoSunw                   = 0x6FFFFFFA,
+    SunwBss                  = 0x6FFFFFFA, // eslint-disable-line @typescript-eslint/no-duplicate-enum-values
+    SunwStack                = 0x6FFFFFFB,
+    HiSunw                   = 0x6FFFFFFF,
+    HiOS                     = 0x6FFFFFFF, // eslint-disable-line @typescript-eslint/no-duplicate-enum-values
     LoProc                   = 0x70000000,
-    HiProc                   = 0x7FFFFFFF,
-    // ARM-specific program types (???)
+    // ARM-specific program types
     SHT_ARM_ExIdx            = 0x70000001,
     SHT_ARM_PreemptMap       = 0x70000002,
     SHT_ARM_Attributes       = 0x70000003,
     SHT_ARM_DebugOverlay     = 0x70000004,
     SHT_ARM_OverlaySection   = 0x70000005,
+    // End ARM-specific program types
+    HiProc                   = 0x7FFFFFFF,
 }
 
 /** Program header flags //! uint32 */
 export enum ProgramFlags {
-    None             = 0x00000000,
-    Exec             = 0x00000001,
-    Write            = 0x00000002,
-    WriteExec        = 0x00000003,
-    Read             = 0x00000004,
-    ReadExec         = 0x00000005,
-    ReadWrite        = 0x00000006,
-    ReadWriteExec    = 0x00000007,
+    Executable      = 0x00000001,
+    Write           = 0x00000002,
+    Read            = 0x00000004,
 }
 
 /** The type of section (section header entry). //! uint32 */
@@ -91,12 +88,65 @@ export enum SectionType {
     StrTab        = 0x00000003,
     /** Section data contains relocation entries with explicit addends (SHT_RELA) */
     Rela          = 0x00000004,
+    /** Section data contains a hash table (SHT_HASH) */
+    Hash          = 0x00000005,
+    /** Section data contains information for dynamic linking (SHT_DYNAMIC) */
+    Dynamic       = 0x00000006,
     /** Section data contains information that marks the file in some way (SHT_NOTE) */
     Note          = 0x00000007,
     /** Section data occupies no space in the file but otherwise resembles SHT_PROGBITS (SHT_NOBITS) */
     NoBits        = 0x00000008,
     /** Section data contains relocation entries without explicit addends (SHT_REL) */
     Rel           = 0x00000009,
+    /** Section is reserved but has unspecified semantics (SHT_SHLIB) */
+    ShLib         = 0x0000000A,
+    /** Section data contains a DLL symbol table (SHT_DYNSYM) */
+    DynSym        = 0x0000000B,
+    /** Section data contains an array of constructors (SHT_INIT_ARRAY) */
+    InitArray     = 0x0000000E,
+    /** Section data contains an array of destructors (SHT_FINI_ARRAY) */
+    FiniArray     = 0x0000000F,
+    /** Section data contains an array of pre-constructors (SHT_PREINIT_ARRAY) */
+    PreInitArray  = 0x00000010,
+    /** Section group (SHT_GROUP) */
+    Group         = 0x00000011,
+    /** Extended section indices (SHT_SYMTAB_SHNDX) */
+    SymTabShndx   = 0x00000012,
+
+    /** Lowest OS-specific section type (SHT_LOOS) */
+    LoOS          = 0x60000000,
+    /** GNU Object Attributes (SHT_GNU_ATTRIBUTES) */
+    GNUAttributes = 0x6FFFFFF5,
+    /** GNU-style hash table (SHT_GNU_HASH) */
+    GNUHash       = 0x6FFFFFF6,
+    /** Prelink library list (SHT_GNU_LIBLIST) */
+    GNULibList    = 0x6FFFFFF7,
+    /** Checksum for DSO content (SHT_CHECKSUM) */
+    DSOChecksum   = 0x6FFFFFF8,
+    /** Sun-specific low bound (SHT_LOSUNW) */
+    LoSunw        = 0x6FFFFFFA,
+    SunwMove      = 0x6FFFFFFA, // eslint-disable-line @typescript-eslint/no-duplicate-enum-values
+    SunwCOMDAT    = 0x6FFFFFFB,
+    SunwSymInfo   = 0x6FFFFFFC,
+    /** Version definition section (SHT_GNU_verdef) */
+    GNUVerDef     = 0x6FFFFFFD,
+    /** Version needs section (SHT_GNU_verneed) */
+    GNUVerNeed    = 0x6FFFFFFE,
+    /** Version symbol table (SHT_GNU_versym) */
+    GNUVerSym     = 0x6FFFFFFF,
+    /** Sun-specific high bound (SHT_HISUNW) */
+    HiSunw        = 0x6FFFFFFF, // eslint-disable-line @typescript-eslint/no-duplicate-enum-values
+    /** Highest OS-specific section type (SHT_HIOS) */
+    HiOS          = 0x6FFFFFFF, // eslint-disable-line @typescript-eslint/no-duplicate-enum-values
+    /** Start of processor-specific section type (SHT_LOPROC) */
+    LoProc        = 0x70000000,
+    /** End of processor-specific section type (SHT_HIPROC) */
+    HiProc        = 0x7FFFFFFF,
+    /** Start of application-specific (SHT_LOUSER) */
+    LoUser        = 0x80000000,
+    /** End of application-specific (SHT_HIUSER) */
+    HiUser        = 0x8FFFFFFF,
+
     /** RPL exports table (SHT_RPL_EXPORTS) */
     RPLExports    = 0x80000001,
     /** RPL imports table (SHT_RPL_IMPORTS) */

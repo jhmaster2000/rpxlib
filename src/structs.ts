@@ -27,14 +27,14 @@ export namespace Structs {
     }
 
     export class Program {
-        public    type: Enums.ProgramType = Enums.ProgramType.Null;    //! uint32
-        protected storedOffset: uint32 = new uint32;                   //! uint32
-        public    virtualAddr: uint32 = new uint32;                    //! uint32
-        public    physicalAddr: uint32 = new uint32;                   //! uint32
-        protected programFileSize: uint32 = new uint32;                //! uint32
-        public    programMemorySize: uint32 = new uint32;              //! uint32
-        public    flags: Enums.ProgramFlags = Enums.ProgramFlags.None; //! uint32
-        public    align: uint32 = new uint32;                          //! uint32
+        public    type: Enums.ProgramType = Enums.ProgramType.Null; //! uint32
+        protected storedOffset: uint32 = new uint32;                //! uint32
+        public    virtualAddr: uint32 = new uint32;                 //! uint32
+        public    physicalAddr: uint32 = new uint32;                //! uint32
+        protected programFileSize: uint32 = new uint32;             //! uint32
+        public    programMemorySize: uint32 = new uint32;           //! uint32
+        public    flags: uint32 = new uint32;                       //! uint32
+        public    align: uint32 = new uint32;                       //! uint32
     }
 
     export type ProgramValues = { [K in keyof Program]: Program[K] };
