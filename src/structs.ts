@@ -10,35 +10,48 @@ export namespace Structs {
         public    version: Enums.Version = Enums.Version.None;    //* uint8
         public    abi: Enums.ABI = Enums.ABI.SystemV;             //* uint8
         public    abiVersion: uint8 = new uint8;                  //* uint8
-        readonly  padding = '\0\0\0\0\0\0\0' as const;            //* uint8[0x7]
+        readonly  padding: "\0\0\0\0\0\0\0" = '\0\0\0\0\0\0\0';   //* uint8[0x7]
         public    type: Enums.Type = Enums.Type.None;             //? uint16
         public    isa: Enums.ISA = Enums.ISA.None;                //? uint16
         public    isaVersion: uint32 = new uint32;                //! uint32
         public    entryPoint: uint32 = new uint32;                //! uint32
-        public    programHeadersOffset: uint32 = new uint32;      //! uint32
-        public    sectionHeadersOffset: uint32 = new uint32;      //! uint32
+        readonly  programHeadersOffset: uint32 = new uint32;      //! uint32
+        readonly  sectionHeadersOffset: uint32 = new uint32;      //! uint32
         public    isaFlags: uint32 = new uint32;                  //! uint32
         readonly  headerSize: uint16 = new uint16(0x0034);        //? uint16
         public    programHeadersEntrySize: uint16 = new uint16;   //? uint16
-        public    programHeadersEntryCount: uint16 = new uint16;  //? uint16
+        protected _programHeadersEntryCount: uint16 = new uint16; //? uint16
         public    sectionHeadersEntrySize: uint16 = new uint16;   //? uint16
         protected _sectionHeadersEntryCount: uint16 = new uint16; //? uint16
         protected _shstrIndex: uint16 = new uint16;               //? uint16
     }
 
+    export class Program {
+        public    type: Enums.ProgramType = Enums.ProgramType.Null;    //! uint32
+        protected storedOffset: uint32 = new uint32;                   //! uint32
+        public    virtualAddr: uint32 = new uint32;                    //! uint32
+        public    physicalAddr: uint32 = new uint32;                   //! uint32
+        protected programFileSize: uint32 = new uint32;                //! uint32
+        public    programMemorySize: uint32 = new uint32;              //! uint32
+        public    flags: Enums.ProgramFlags = Enums.ProgramFlags.None; //! uint32
+        public    align: uint32 = new uint32;                          //! uint32
+    }
+
+    export type ProgramValues = { [K in keyof Program]: Program[K] };
+
     export class Section {
         /** Offset from the start of the section headers string table to
           * the address of this section's name in said table, if any. */
-        public    nameOffset: uint32 = new uint32;    //! uint32
+        public    nameOffset: uint32 = new uint32;                  //! uint32
         public    type: Enums.SectionType = Enums.SectionType.Null; //! uint32
-        public    flags: uint32 = new uint32;         //! uint32
-        public    addr: uint32 = new uint32;          //! uint32
-        protected storedOffset: uint32 = new uint32;  //! uint32
-        protected storedSize: uint32 = new uint32;    //! uint32
-        public    link: uint32 = new uint32;          //! uint32
-        public    info: uint32 = new uint32;          //! uint32
-        public    addrAlign: uint32 = new uint32;     //! uint32
-        public    entSize: uint32 = new uint32;       //! uint32
+        public    flags: uint32 = new uint32;                       //! uint32
+        public    addr: uint32 = new uint32;                        //! uint32
+        protected storedOffset: uint32 = new uint32;                //! uint32
+        protected storedSize: uint32 = new uint32;                  //! uint32
+        public    link: uint32 = new uint32;                        //! uint32
+        public    info: uint32 = new uint32;                        //! uint32
+        public    addrAlign: uint32 = new uint32;                   //! uint32
+        public    entSize: uint32 = new uint32;                     //! uint32
     }
 
     export type SectionValues = { [K in keyof Section]: Section[K] };

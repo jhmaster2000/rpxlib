@@ -8,6 +8,7 @@ import { SectionFlags, SectionType, Type } from './enums.js';
 import { sint32, uint16, uint32 } from './primitives.js';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
 import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
+import { Program } from './programs.js';
 
 interface RPLSaveOptions {
     /** Ignore `Compressed` flags and just try to compress all compressable sections.
@@ -16,6 +17,8 @@ interface RPLSaveOptions {
      *
      * A value of `false` for `compression` parameter has higher priority than this. */
     compressAsPossible?: boolean;
+    /** Ignore program headers/segments and force saving anyway without them. */
+    forceIgnoreSegments?: boolean;
 }
 
 interface RPLParseOptions {
@@ -32,7 +35,20 @@ export class RPL extends Header {
 
         opts.parseRelocs ??= false;
 
-        this.#sections = new Array(<number>this._sectionHeadersEntryCount) as Section[];
+        this.#programs = new Array(+this._programHeadersEntryCount) as Program[];
+        this.#sections = new Array(+this._sectionHeadersEntryCount) as Section[];
+
+        file.pos = +this.programHeadersOffset;
+
+        for (let i = 0; i < +this._programHeadersEntryCount; i++) {
+            //const programType: Type = +file.passUint32();
+            //file.pos -= 4;
+            //switch (programType) {
+            //    default:
+            this.#programs[i] = new Program(file, this);
+            //}
+        }
+
         file.pos = +this.sectionHeadersOffset;
 
         for (let i = 0; i < +this._sectionHeadersEntryCount; i++) {
@@ -50,8 +66,9 @@ export class RPL extends Header {
                 default:                      this.#sections[i] = new Section(file, this);
             }
         }
-        //! [[DISCARD this._sectionHeadersEntryCount]]
-        Reflect.deleteProperty(this, '_sectionHeadersEntryCount');
+        
+        Reflect.deleteProperty(this, '_programHeadersEntryCount'); //! [[DISCARD this._programHeadersEntryCount]]
+        Reflect.deleteProperty(this, '_sectionHeadersEntryCount'); //! [[DISCARD this._sectionHeadersEntryCount]]
     }
 
     /**
@@ -65,7 +82,22 @@ export class RPL extends Header {
      * - `0` disables compression but still wraps the data in a zlib header and footer.
      */
     save(filepath: string, compression: boolean | CompressionLevel = false, options: RPLSaveOptions = {}) {
-        const headers = new DataWrapper(Buffer.allocUnsafe(<number>this.sectionHeadersOffset + (this.#sections.length * <number>this.sectionHeadersEntrySize)));
+        if (+this.programHeadersEntryCount !== 0) {
+            if (!options.forceIgnoreSegments) throw new Error(
+                'Cannot save file, program headers saving is not yet supported.\n' +
+                'Use the "forceIgnoreSegments" option to force trying to save anyway (program headers will be stripped out!).'
+            );
+            else console.warn(
+                '[!] Forcefully saving file with program headers/segments.\n' +
+                '    Program headers will be stripped out and the file may be corrupt!'
+            );
+        }
+
+        const headers = new DataWrapper(Buffer.allocUnsafe(
+            <number>this.headerSize
+            //+ (this.#programs.length * <number>this.programHeadersEntrySize)
+            + (this.#sections.length * <number>this.sectionHeadersEntrySize)
+        ));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
         headers.dropUint8(this.endian);
@@ -77,16 +109,16 @@ export class RPL extends Header {
         headers.dropUint16(this.isa);
         headers.dropUint32(this.isaVersion);
         headers.dropUint32(this.entryPoint);
-        headers.dropUint32(this.programHeadersOffset);
-        headers.dropUint32(this.sectionHeadersOffset);
+        headers.dropUint32(0 /*this.programHeadersOffset*/);
+        headers.dropUint32(this.headerSize /*this.sectionHeadersOffset*/);
         headers.dropUint32(this.isaFlags);
         headers.dropUint16(this.headerSize);
-        headers.dropUint16(this.programHeadersEntrySize);
-        headers.dropUint16(this.programHeadersEntryCount);
+        headers.dropUint16(0 /*this.programHeadersEntrySize*/);
+        headers.dropUint16(0 /*this.programHeadersEntryCount*/);
         headers.dropUint16(this.sectionHeadersEntrySize);
         headers.dropUint16(this.sectionHeadersEntryCount);
         headers.dropUint16(this.shstrIndex);
-        headers.zerofill(<number>this.sectionHeadersOffset - <number>this.headerSize); //? padding
+        //headers.zerofill(); //? padding
 
         if (+this.type === Type.RPL) {
             const fileinfoSection = (<RPLFileInfoSection | undefined>this.#sections.find(s => s instanceof RPLFileInfoSection));
@@ -99,7 +131,9 @@ export class RPL extends Header {
 
         let crcsOffset = 0;
         let crcs: number[] = [];
-        let currOffset = <number>this.sectionHeadersOffset + <number>this.sectionHeadersEntrySize * this.#sections.length;
+        let currOffset = <number>this.headerSize
+            //+ <number>this.programHeadersEntrySize * this.#programs.length
+            + <number>this.sectionHeadersEntrySize * this.#sections.length;
         const datasink = new DataSink();
 
         /** If uncompressedData is `true`, the section is considered the RPLCrcSection */
@@ -207,16 +241,24 @@ export class RPL extends Header {
         }
 
         const file = Buffer.concat([headers, datasink.end(), Buffer.alloc(1)]);
-        if (+this.type === Type.RPL && crcsOffset !== 0) file.set(crcs, crcsOffset);
+        if (+this.type === Type.RPL) {
+            if (crcsOffset !== 0) file.set(crcs, crcsOffset);
+            else throw new Error('Cannot save RPL, no RPL CRCs section found.');
+        }
 
         filepath = Util.resolve(+this.type !== Type.RPL ? filepath : `${filepath}.${compression === false ? 'elf' : 'rpx'}`);
         fs.writeFileSync(filepath, file);
         return { filepath, filedata: file };
     }
 
+    #programs: Program[];
+    get programs(): ReadonlyArray<Program> { return this.#programs; }
+    get programHeadersEntryCount(): uint16 { return new uint16(this.#programs.length); }
+
     #sections: Section[];
     get sections(): ReadonlyArray<Section> { return this.#sections; }
     get sectionHeadersEntryCount(): uint16 { return new uint16(this.#sections.length); }
+
     get shstrIndex(): uint16 { return this._shstrIndex; }
     set shstrIndex(index: uint16) {
         index = +index;
@@ -261,7 +303,7 @@ export class RPL extends Header {
                 x.toString(16).toUpperCase().padStart(8, '0'),
                 y.toString(16).toUpperCase().padStart(8, '0')
             ].join(' -> ') + '\x1B[0m'] as const);
-            console.log([...freeFmt, ...occupiedFmt].sort((a, b) => a[0] - b[0]).map(x => x[1]).join('\n'));
+            console.info([...freeFmt, ...occupiedFmt].sort((a, b) => a[0] - b[0]).map(x => x[1]).join('\n'));
         } };
     }
 

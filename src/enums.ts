@@ -39,6 +39,46 @@ export enum ISA {
     PPC64         = 0x0015
 }
 
+/** The type of program (program header entry, AKA segments). //! uint32 */
+export enum ProgramType {
+    Null                     = 0x00000000,
+    Load                     = 0x00000001,
+    Dynamic                  = 0x00000002,
+    Inerp                    = 0x00000003,
+    Note                     = 0x00000004,
+    ShLib                    = 0x00000005,
+    Phdr                     = 0x00000006,
+    TLS                      = 0x00000007,
+    Num                      = 0x00000008,
+    Loos                     = 0x60000000,
+    GNUEhFrame               = 0x6474E550,
+    GNUStack                 = 0x6474E551,
+    GNURelro                 = 0x6474E552,
+    Losunw_or_Sunwbss        = 0x6FFFFFFA,
+    Sunwstack                = 0x6FFFFFFB,
+    Hisunw_or_Hios           = 0x6FFFFFFF,
+    LoProc                   = 0x70000000,
+    HiProc                   = 0x7FFFFFFF,
+    // ARM-specific program types (???)
+    SHT_ARM_ExIdx            = 0x70000001,
+    SHT_ARM_PreemptMap       = 0x70000002,
+    SHT_ARM_Attributes       = 0x70000003,
+    SHT_ARM_DebugOverlay     = 0x70000004,
+    SHT_ARM_OverlaySection   = 0x70000005,
+}
+
+/** Program header flags //! uint32 */
+export enum ProgramFlags {
+    None             = 0x00000000,
+    Exec             = 0x00000001,
+    Write            = 0x00000002,
+    WriteExec        = 0x00000003,
+    Read             = 0x00000004,
+    ReadExec         = 0x00000005,
+    ReadWrite        = 0x00000006,
+    ReadWriteExec    = 0x00000007,
+}
+
 /** The type of section (section header entry). //! uint32 */
 export enum SectionType {
     /** Inactive section with undefined values (SHT_NULL) */

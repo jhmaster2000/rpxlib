@@ -42,8 +42,8 @@ export class Section extends Structs.Section {
             this.storedSize = new uint32(0);
             const sectionType = +inputdata.type;
             if (sectionType !== SectionType.NoBits && sectionType !== SectionType.Null) {
-                this.storedOffset = new uint32(0xFFFFFFFF); // Special value for internal use
-                this.storedSize = new uint32(0xFFFFFFFF); // Special value for internal use
+                this.storedOffset = new uint32(0xFFFFFFFF); // Special value to indicate that the offset is not yet known but is non-zero.
+                this.storedSize = new uint32(0xFFFFFFFF); // Special value to indicate that the size is not yet known but is non-zero.
                 if (!inputdata.data) {
                     if (Reflect.get(inputdata, 'fromSuper')) return this;
                     else throw new TypeError('Sections not of type Null or NoBits must have data.');
@@ -75,9 +75,9 @@ export class Section extends Structs.Section {
         }
     }
 
-    override readonly type;
-    protected override readonly storedOffset;
-    protected override readonly storedSize;
+    override readonly type: SectionType;
+    protected override readonly storedOffset: uint32;
+    protected override readonly storedSize: uint32;
 
     get index(): number {
         return this.rpx.sections.indexOf(this);
@@ -98,7 +98,9 @@ export class Section extends Structs.Section {
         const sections = this.rpx.sections.filter(section => section.hasData);
         const idx = sections.indexOf(this);
         if (idx === 0) {
-            const off = <number>this.rpx.sectionHeadersOffset + <number>this.rpx.sectionHeadersEntrySize * this.rpx.sections.length;
+            const off = <number>this.rpx.headerSize
+                //+ <number>this.rpx.programHeadersEntrySize * this.rpx.programs.length
+                + <number>this.rpx.sectionHeadersEntrySize * this.rpx.sections.length;
             return new uint32(off);
         }
         const prevSect = sections[idx - 1]!;

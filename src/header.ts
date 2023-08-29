@@ -21,7 +21,7 @@ export class Header extends Structs.Header {
         this.isaFlags = file.passUint32();
         file.pos += 2; //? headerSize
         this.programHeadersEntrySize = file.passUint16();
-        this.programHeadersEntryCount = file.passUint16();
+        this._programHeadersEntryCount = file.passUint16(); //! [[DISCARDED @ RPL constructor]]
         this.sectionHeadersEntrySize = file.passUint16();
         this._sectionHeadersEntryCount = file.passUint16(); //! [[DISCARDED @ RPL.constructor]]
         this._shstrIndex = file.passUint16();
@@ -29,19 +29,23 @@ export class Header extends Structs.Header {
 
     override readonly class;
     override readonly endian;
-    override readonly version;
+    //override readonly version;
     override readonly abi;
-    override readonly abiVersion;
+    //override readonly abiVersion;
     override readonly type;
     override readonly isa;
-    override readonly isaFlags;
-    override readonly isaVersion;
-    override readonly entryPoint;
+    //override readonly isaVersion;
+    //override readonly isaFlags;
+    //override readonly entryPoint;
     override readonly programHeadersOffset;
     override readonly programHeadersEntrySize;
-    override readonly programHeadersEntryCount;
-    override readonly sectionHeadersEntrySize;
     override readonly sectionHeadersOffset;
+    override readonly sectionHeadersEntrySize;
+    /**
+     * @internal Do not access outside of the Header class or the RPL class constructor.
+     * This property is deleted outside of the Header class/RPL constructor as it's invalidated by RPL class in favor of `RPL.programHeadersEntryCount`.
+     */
+    protected override readonly _programHeadersEntryCount;
     /**
      * @internal Do not access outside of the Header class or the RPL class constructor.
      * This property is deleted outside of the Header class/RPL constructor as it's invalidated by RPL class in favor of `RPL.sectionHeadersEntryCount`.
