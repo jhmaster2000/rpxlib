@@ -398,8 +398,8 @@ export class RPL extends Header {
         }
 
         if (!stubMode) {
-            this.shstrIndex = <number>this._shstrIndex - 1;
             this.#sections.splice(this.#sections.indexOf(section), 1);
+            this.shstrIndex = <number>this._shstrIndex - 1;
         } else {
             this.#sections[section.index] = new Section(new DataWrapper(new Uint8Array(0x28)), this);
         }
