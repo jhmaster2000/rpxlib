@@ -28,8 +28,17 @@ export enum ABI {
 /** The type of ELF file. Executables are ELF files, while some other files (like .o or .so files)
   * are also ELF files but of different types. //? uint16 */
 export enum Type {
-    None        = 0x0000,
-    RPL         = 0xFE01
+    None     = 0x0000,
+    Rel      = 0x0001,
+    Exec     = 0x0002,
+    Dyn      = 0x0003,
+    Core     = 0x0004,
+    LowOS    = 0xFE00,
+    SIE      = 0xFE18,
+    RPL      = 0xFE01,
+    HighOS   = 0xFEFF,
+    LowProc  = 0xFF00,
+    HighProc = 0xFFFF,
 }
 
 /** The type of Instruction Set Architecture. //? uint16 */

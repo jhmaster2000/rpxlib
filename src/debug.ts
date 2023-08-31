@@ -31,8 +31,27 @@ const stringifyClass = (v: Class) => !+v ? 'None' : (+v === Class.ELF32 ? '32 bi
 const stringifyEndian = (v: Endian) => Endian[v] ?? 'Unknown';
 const stringifyVersion = (v: Version) => Version[v] ?? 'Unknown';
 const stringifyABI = (v: ABI) => ABI[v] ?? 'Unknown';
-const stringifyType = (v: Type) => Type[v] ?? 'Unknown';
+const stringifyType = (v: Type) => {
+    const TypeStrings = {
+        [Type.None]: 'None',
+        [Type.Rel]: 'Relocatable',
+        [Type.Exec]: 'Executable',
+        [Type.Dyn]: 'Dynamic',
+        [Type.Core]: 'Core',
+        [Type.LowOS]: 'OS-Specific', // (start)
+        [Type.SIE]: 'SIE',
+        [Type.RPL]: 'RPL',
+        [Type.HighOS]: 'OS-Specific', // (end)
+        [Type.LowProc]: 'Processor-Specific', // (start)
+        [Type.HighProc]: 'Processor-Specific', // (end)
+    };
+    const str = TypeStrings[v];
+    if (str) return str;
+    if (v >= Type.LowOS && v <= Type.HighOS) return 'OS-Specific';
+    if (v >= Type.LowProc && v <= Type.HighProc) return 'Processor-Specific';
+    return 'Unknown';
 
+};
 const stringifyISA = (v: ISA) => {
     const isaStrings = {
         [ISA.None]:  'None',
@@ -57,9 +76,9 @@ const stringifyProgramType = (v: ProgramType) => {
         [ProgramType.GNURelRo]: 'GNU Read-only After Reloc.',
         [ProgramType.SunwBss]: 'SUNW .bss/Low SUNW',
         [ProgramType.SunwStack]: 'SUNW Stack',
-        [ProgramType.HiOS]: 'High OS-Specific/High SUNW',
-        [ProgramType.LoProc]: 'Low Processor-Specific',
-        [ProgramType.HiProc]: 'High Processor-Specific',
+        [ProgramType.HiOS]: 'OS-Specific', // (end)
+        [ProgramType.LoProc]: 'Processor-Specific', // (start)
+        [ProgramType.HiProc]: 'Processor-Specific', // (end)
         [ProgramType.SHT_ARM_ExIdx]: 'ARM Exception Index Table',
         [ProgramType.SHT_ARM_PreemptMap]: 'ARM DLL Link Preemption Map',
         [ProgramType.SHT_ARM_Attributes]: 'ARM Attributes',
@@ -108,9 +127,9 @@ const stringifySectionType = (v: SectionType) => {
         [SectionType.SunwSymInfo]: 'SUNW Symbol Info',
         [SectionType.GNUVerDef]: 'GNU Version Definition',
         [SectionType.GNUVerNeed]: 'GNU Version Needs',
-        [SectionType.GNUVerSym]: 'GNU Version Symbol Table',
-        [SectionType.LoProc]: 'Low Processor-Specific',
-        [SectionType.HiProc]: 'High Processor-Specific',
+        [SectionType.GNUVerSym]: 'GNU Version Symbol Table', // (end OS-Specific)
+        [SectionType.LoProc]: 'Processor-Specific', // (start)
+        [SectionType.HiProc]: 'Processor-Specific', // (end)
         [SectionType.LoUser]: 'User-Specific', // (start)
         [SectionType.HiUser]: 'User-Specific', // (end)
         [SectionType.RPLExports]: 'RPL Exports',
