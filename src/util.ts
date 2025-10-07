@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 
 namespace Util {
     export function resolve(relativePath: string, from: string = process.cwd()) {

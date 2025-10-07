@@ -21,12 +21,10 @@
     },
     "devDependencies": {
         "@types/node": "^24.6.1",
-        "@typescript-eslint/eslint-plugin": "^6.5.0",
-        "@typescript-eslint/parser": "^6.5.0",
-        "eslint": "^8.48.0",
-        "eslint-plugin-deprecation": "^1.5.0",
-        "eslint-plugin-unicorn": "^48.0.1",
-        "typescript": "^5.2.2"
+        "eslint": "9.36",
+        "eslint-plugin-unicorn": "^61.0.2",
+        "typescript": "^5.9.2",
+        "typescript-eslint": "8.44"
     },
     "dependencies": {
         "@foxglove/crc": "^0.0.3"

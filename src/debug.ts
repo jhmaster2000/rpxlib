@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
     ABI, Class, Endian, ISA, Type, Version,
     SymbolBinding, SymbolType, SymbolVisibility, 

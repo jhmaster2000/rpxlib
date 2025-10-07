@@ -70,6 +70,7 @@ export class DataWrapper extends Uint8Array {
 
     drop(values: TypedArray | number[]): void {
         this.set(values, this.pos);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         this.pos += (<TypedArray>values).byteLength ?? values.length;
     }
     zerofill(byteCount: number): void {

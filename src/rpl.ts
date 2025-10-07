@@ -1,5 +1,5 @@
-import fs from 'fs';
-import zlib from 'zlib';
+import fs from 'node:fs';
+import zlib from 'node:zlib';
 import Util from './util.js';
 import { crc32 } from '@foxglove/crc';
 import { Header } from './header.js';
@@ -153,7 +153,7 @@ export class RPL extends Header {
         //headers.zerofill(); //? padding
 
         if (+this.type === Type.RPL) {
-            const fileinfoSection = (<RPLFileInfoSection | undefined>this.#sections.find(s => s instanceof RPLFileInfoSection));
+            const fileinfoSection = this.#sections.find(s => s instanceof RPLFileInfoSection);
             if (!fileinfoSection) throw new Error('Cannot save RPL, no RPL File Info section found.');
             if (compression === true) compression = <CompressionLevel>+fileinfoSection.fileinfo.compressionLevel;
             else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? 0 : compression);

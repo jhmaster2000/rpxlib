@@ -7,7 +7,7 @@ import { Structs } from './structs.js';
 import { crc32 } from '@foxglove/crc';
 import { RPL } from './rpl.js';
 import Util from './util.js';
-import zlib from 'zlib';
+import zlib from 'node:zlib';
 import { RelocationStore } from './relocationstore.js';
 
 const SPECIAL_SECTIONS_STRINGS: Record<number, string> = {
