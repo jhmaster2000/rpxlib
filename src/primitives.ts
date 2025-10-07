@@ -2,7 +2,7 @@ export const CodeBaseAddress = 0x02000000 as const;
 export const DataBaseAddress = 0x10000000 as const;
 export const LoadBaseAddress = 0xC0000000 as const;
 
-export type TypedArray = Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | Float32Array | Float64Array;
+export type TypedArray<T extends ArrayBufferLike = ArrayBufferLike> = Uint8Array<T> | Uint16Array<T> | Uint32Array<T> | Int8Array<T> | Int16Array<T> | Int32Array<T> | Float32Array<T> | Float64Array<T>;
 
 export type nybble = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
 

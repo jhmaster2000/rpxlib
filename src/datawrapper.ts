@@ -1,7 +1,9 @@
 import { uint8, uint16, uint32, sint8, sint16, sint32, type TypedArray } from './primitives.js';
 
 export class DataWrapper extends Uint8Array {
-    constructor(arg: TypedArray) { super(arg.buffer, arg.byteOffset, arg.byteLength); }
+    constructor(arg: TypedArray) {
+        super(arg.buffer as ArrayBuffer, arg.byteOffset, arg.byteLength);
+    }
     pos: number = 0;
 
     passUint8(): uint8 {
@@ -117,7 +119,8 @@ export class ReadonlyDataWrapper extends DataWrapper {
     /** @internal For internal APIs */
     protected get '@@arraybuffer'(): ArrayBuffer { return super.buffer; }
     override get buffer(): never { throw new Error('Cannot access writable ArrayBuffer of ReadonlyDataWrapper instance.'); }
-    override reverse(): ReadonlyDataWrapper { return new ReadonlyDataWrapper(new Uint8Array(this).reverse()); }
+    toReversed(): ReadonlyDataWrapper { return new ReadonlyDataWrapper(new Uint8Array(this).reverse()); }
+    override reverse(): Discarded { throw new Error('Illegal call to ReadonlyDataWrapper.reverse'); }
     override set(...$: Discarded): void { return; }
     override slice(start?: number, end?: number) { return new ReadonlyDataWrapper(super.slice(start, end)); }
     override subarray(start?: number, end?: number) { return new ReadonlyDataWrapper(super.subarray(start, end)); }
