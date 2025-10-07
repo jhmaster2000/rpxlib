@@ -419,14 +419,107 @@ export enum RelocationType {
     /** (R_PPC_ADDR30) [word30] */
     PPCAddr30 = 0x25,
 
-    // ...RESERVED...
+    // PPC TLS access ABI (taken from: https://docs.rs/object/latest/src/object/elf.rs.html#3374)
+    /** none    (sym+add)@tls */
+    PPC_TLS = 67,
+    /** word32  (sym+add)@dtpmod */
+    PPC_DTPMOD32 = 68,
+    /** half16* (sym+add)@tprel */
+    PPC_TPREL16 = 69,
+    /** half16  (sym+add)@tprel@l */
+    PPC_TPREL16_LO = 70,
+    /** half16  (sym+add)@tprel@h */
+    PPC_TPREL16_HI = 71,
+    /** half16  (sym+add)@tprel@ha */
+    PPC_TPREL16_HA = 72,
+    /** word32  (sym+add)@tprel */
+    PPC_TPREL32 = 73,
+    /** half16*(sym+add)@dtprel */
+    PPC_DTPREL16 = 74,
+    /** half16  (sym+add)@dtprel@l */
+    PPC_DTPREL16_LO = 75,
+    /** half16  (sym+add)@dtprel@h */
+    PPC_DTPREL16_HI = 76,
+    /** half16  (sym+add)@dtprel@ha */
+    PPC_DTPREL16_HA = 77,
+    /** word32  (sym+add)@dtprel */
+    PPC_DTPREL32 = 78,
+    /** half16* (sym+add)@got@tlsgd */
+    PPC_GOT_TLSGD16 = 79,
+    /** half16  (sym+add)@got@tlsgd@l */
+    PPC_GOT_TLSGD16_LO = 80,
+    /** half16  (sym+add)@got@tlsgd@h */
+    PPC_GOT_TLSGD16_HI = 81,
+    /** half16  (sym+add)@got@tlsgd@ha */
+    PPC_GOT_TLSGD16_HA = 82,
+    /** half16* (sym+add)@got@tlsld */
+    PPC_GOT_TLSLD16 = 83,
+    /** half16  (sym+add)@got@tlsld@l */
+    PPC_GOT_TLSLD16_LO = 84,
+    /** half16  (sym+add)@got@tlsld@h */
+    PPC_GOT_TLSLD16_HI = 85,
+    /** half16  (sym+add)@got@tlsld@ha */
+    PPC_GOT_TLSLD16_HA = 86,
+    /** half16* (sym+add)@got@tprel */
+    PPC_GOT_TPREL16 = 87,
+    /** half16  (sym+add)@got@tprel@l */
+    PPC_GOT_TPREL16_LO = 88,
+    /** half16  (sym+add)@got@tprel@h */
+    PPC_GOT_TPREL16_HI = 89,
+    /** half16  (sym+add)@got@tprel@ha */
+    PPC_GOT_TPREL16_HA = 90,
+    /** half16* (sym+add)@got@dtprel */
+    PPC_GOT_DTPREL16 = 91,
+    /** half16* (sym+add)@got@dtprel@l */
+    PPC_GOT_DTPREL16_LO = 92,
+    /** half16* (sym+add)@got@dtprel@h */
+    PPC_GOT_DTPREL16_HI = 93,
+    /** half16* (sym+add)@got@dtprel@ha */
+    PPC_GOT_DTPREL16_HA = 94,
+    /** none    (sym+add)@tlsgd */
+    PPC_TLSGD = 95,
+    /** none    (sym+add)@tlsld */
+    PPC_TLSLD = 96,
 
     /** (R_PPC_EMB_START) [pseudo] */
     PPCEmbStart = 101,
+
+    //PPC_EMB_NADDR32 = 101,
+    PPC_EMB_NADDR16 = 102,
+    PPC_EMB_NADDR16_LO = 103,
+    PPC_EMB_NADDR16_HI = 104,
+    PPC_EMB_NADDR16_HA = 105,
+    PPC_EMB_SDAI16 = 106,
+    PPC_EMB_SDA2I16 = 107,
+    PPC_EMB_SDA2REL = 108,
+    PPC_EMB_SDA21 = 109,
+    PPC_EMB_MRKREF = 110,
+    PPC_EMB_RELSEC16 = 111,
+    PPC_EMB_RELST_LO = 112,
+    PPC_EMB_RELST_HI = 113,
+    PPC_EMB_RELST_HA = 114,
+    PPC_EMB_BIT_FLD = 115,
+    PPC_EMB_RELSDA = 116,
+
+    // Diab
+    PPC_DIAB_SDA21_LO = 180,
+    PPC_DIAB_SDA21_HI = 181,
+    PPC_DIAB_SDA21_HA = 182,
+    PPC_DIAB_RELSDA_LO = 183,
+    PPC_DIAB_RELSDA_HI = 184,
+    PPC_DIAB_RELSDA_HA = 185,
+
     /** (R_PPC_EMB_END) [pseudo] */
     PPCEmbEnd = 200,
 
-    // ...RESERVED...
+    PPC_IRELATIVE = 248,
+
+    /* CafeOS-specific */
+    PPC_CAFE_REL16_HA = 251,
+    PPC_CAFE_REL16_HI = 252,
+    PPC_CAFE_REL16_LO = 253,
+
+    PPC_TOC16 = 255,
 }
 
 /** The type of a relocation field.
