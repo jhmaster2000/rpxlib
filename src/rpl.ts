@@ -119,7 +119,7 @@ export class RPL extends Header {
                 'Cannot save file, program headers saving is not yet supported.\n' +
                 'Use the "forceIgnoreSegments" option to force trying to save anyway (program headers will be stripped out!).'
             );
-            else console.warn(
+            else if (!Reflect.get(options, Symbol.for('@@iKnowWhatImDoing'))) console.warn(
                 '[!] Forcefully saving file with program headers/segments.\n' +
                 '    Program headers will be stripped out and the file may be corrupt!'
             );
