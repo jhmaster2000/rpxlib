@@ -120,8 +120,8 @@ export class RPL extends Header {
                 'Use the "forceIgnoreSegments" option to force trying to save anyway (program headers will be stripped out!).'
             );
             else if (!Reflect.get(options, Symbol.for('@@iKnowWhatImDoing'))) console.warn(
-                '[!] Forcefully saving file with program headers/segments.\n' +
-                '    Program headers will be stripped out and the file may be corrupt!'
+                '[rpxlib] WARN: Forcefully saving file with program headers/segments.\n' +
+                '         Program headers will be stripped out and the file may be corrupt!'
             );
         }
 
@@ -213,8 +213,8 @@ export class RPL extends Header {
                         sectionSize = section.size;
                         const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
                         if (!options.compressAsPossible) console.warn(
-                            `[!] Saving section #${i} which has no data and has been marked as compressed.\n` +
-                            `    This is likely a mistake and the section has been unmarked as compressed.`
+                            `[rpxlib] WARN: Saving section #${i} which has no data and has been marked as compressed.\n` +
+                            `         This is likely a mistake and the section has been unmarked as compressed.`
                         );
                     } else if (isCRCSection || +section.type === SectionType.RPLFileInfo) {
                         (<number>section.flags) &= ~SectionFlags.Compressed;
@@ -222,8 +222,8 @@ export class RPL extends Header {
                         currOffset += <number>sectionSize;
                         writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
                         if (!options.compressAsPossible) console.warn(
-                            `[!] Saving RPL CRCs or File Info section which has been marked as compressed, this is likely a mistake.\n` +
-                            `    These sections cannot be compressed and have been saved as uncompressed instead.`
+                            `[rpxlib] WARN: Saving RPL CRCs or File Info section which has been marked as compressed, this is likely a mistake.\n` +
+                            `         These sections cannot be compressed and have been saved as uncompressed instead.`
                         );
                     } else {
                         const data = section.data!;
@@ -242,8 +242,8 @@ export class RPL extends Header {
                             currOffset += <number>sectionSize;
                             writeSectionDataAndCRC(i, sectionOffset, uncompressed);
                             if (!options.compressAsPossible) console.warn(
-                                `[!] Saving section #${i} which has been marked as compressed as uncompressed,\n` +
-                                `    due to the compression making it larger than uncompressed.`
+                                `[rpxlib] WARN: Saving section #${i} which has been marked as compressed as uncompressed,\n` +
+                                `         due to the compression making it larger than uncompressed.`
                             );
                         } else {
                             sectionSize = compressed.byteLength;
