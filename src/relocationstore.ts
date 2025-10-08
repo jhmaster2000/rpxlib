@@ -4,11 +4,20 @@ import { uint32 } from './primitives.js';
 
 type RelocWithIndex = Relocation & { index: number };
 
+enum DirtyRelocType {
+    DELETED = 0,
+    MODIFIED = 1,
+}
+type DirtyRelocRef = { idx: number } & (
+    | { type: DirtyRelocType.DELETED }
+    | { type: DirtyRelocType.MODIFIED, addr: number }
+);
+
 export class RelocationStore {
     /** Array of deleted relocations indexes */
     #deleted: number[] = [];
-    /** Set of modified relocations indexes */
-    #modified = new Set<number>;
+    /** Map of modified relocations: index -> address */
+    #modified = new Map<number, number>();
     /** Set of added relocations addresses */
     #added = new Set<number>();
 
@@ -52,52 +61,48 @@ export class RelocationStore {
     /** All of the RelocationStore's relocations as a buffer. */
     get buffer(): Uint8Array {
         const dw = new DataWrapper(Buffer.allocUnsafe(this.size));
-        const entSize = this.entSize;
+        const { entSize } = this;
         const originalCount = this.#data.byteLength / entSize;
-        // Prepare sorted lists
-        const deleted = Array.from(this.#deleted).sort((a, b) => a - b);
-        const modified = Array.from(this.#modified).sort((a, b) => a - b);
-        // Merge deleted and modified into a single sorted list with tags
-        let specials: { idx: number, type: 'deleted' | 'modified' }[] = [];
-        let d = 0, m = 0;
-        while (d < deleted.length || m < modified.length) {
-            if (d < deleted.length && (m >= modified.length || deleted[d]! < modified[m]!)) {
-                specials.push({ idx: deleted[d++]!, type: 'deleted' });
-            } else if (m < modified.length && (d >= deleted.length || modified[m]! < deleted[d]!)) {
-                specials.push({ idx: modified[m++]!, type: 'modified' });
-            } else if (d < deleted.length && m < modified.length && deleted[d] === modified[m]) {
-                // If both, treat as deleted (deletion takes precedence)
-                specials.push({ idx: deleted[d]!, type: 'deleted' });
-                d++; m++;
-            }
-        }
+
+        // Tag and merge deleteds & modifieds into one list sorted by index
+        const specials: DirtyRelocRef[] = [
+            ...this.#deleted.map(idx => (
+                { idx, type: DirtyRelocType.DELETED as const }
+            )),
+            ...[...this.#modified].map(([idx, addr]) => (
+                { idx, type: DirtyRelocType.MODIFIED as const, addr }
+            ))
+        ].sort((a, b) => a.idx - b.idx);
+
         // Walk through originals efficiently
-        let pos = 0;
-        for (const { idx, type } of specials) {
+        let posIdx = 0;
+        for (const special of specials) {
+            const { idx, type } = special;
             if (idx >= originalCount) break;
-            if (pos < idx) {
+            if (posIdx < idx) {
                 // Copy block of unmodified data
-                dw.drop(this.#data.subarray(pos * entSize, idx * entSize));
+                dw.drop(this.#data.subarray(posIdx * entSize, idx * entSize));
             }
-            if (type === 'modified') {
-                // Write modified relocation from map
-                const rel = Array.from(this.#map.values()).find(r => r.index === idx);
-                if (!rel) throw new Error('Fatal desync of internal data state detected. (This is a bug!)');
+            if (type === DirtyRelocType.MODIFIED) {
+                // Write modified relocation
+                const rel = this.#map.get(special.addr);
+                if (!rel) throw new Error('Fatal desync of internal data state detected [#M]. (This is a bug!)');
                 dw.dropUint32(rel.addr);
                 dw.dropUint32(rel.info);
                 if (this.rela) dw.dropInt32(rel.addend!);
             }
-            // If deleted, skip writing
-            pos = idx + 1;
+            // If type was MODIFIED, we are advancing over the bytes we just wrote the modified reloc to above
+            // If type === DELETED, simply skip without doing anything
+            posIdx = idx + 1;
         }
         // Write any remaining unmodified data
-        if (pos < originalCount) {
-            dw.drop(this.#data.subarray(pos * entSize, originalCount * entSize));
+        if (posIdx < originalCount) {
+            dw.drop(this.#data.subarray(posIdx * entSize, originalCount * entSize));
         }
         // Append added relocations efficiently by direct map access
-        if (this.#added.size !== 0) for (const addr of this.#added) {
+        for (const addr of this.#added) {
             const rel = this.#map.get(addr);
-            if (!rel) throw new Error('Fatal desync of internal data state detected. (This is a bug!)'); // should never happen
+            if (!rel) throw new Error('Fatal desync of internal data state detected [#A]. (This is a bug!)'); // should never happen
             dw.dropUint32(rel.addr);
             dw.dropUint32(rel.info);
             if (this.rela) dw.dropInt32(rel.addend!);
@@ -140,20 +145,21 @@ export class RelocationStore {
     
     /** @experimental */
     set(rel: Relocation) {
-        const oldRel = this.#map.get(+rel.addr);
-        if (!oldRel) throw new Error(`[RelocationStore] set(): No existing relocation at 0x${rel.addr.toString(16)} to set. Did you mean to use add()?`);
+        const addr = +rel.addr;
+        const oldRel = this.#map.get(addr);
+        if (!oldRel) throw new Error(`[RelocationStore] set(): No existing relocation at 0x${addr.toString(16)} to set. Did you mean to use add()?`);
         if (oldRel === rel) throw new Error(`[RelocationStore] set(): Attempt to set relocation to itself, this is a sign of incorrect usage. You must create a new Relocation object to set over the old one.`);
         if (this.rela && rel.addend === undefined) throw new Error(`[RelocationStore] set(): Attempt to set non-RELA relocation to RELA store.`);
         if (!this.rela && rel.addend !== undefined) throw new Error(`[RelocationStore] set(): Attempt to set RELA relocation to non-RELA store.`);
         
         const newRelWithIndex = rel as RelocWithIndex;
         newRelWithIndex.index = oldRel.index;
-        this.#map.set(+rel.addr, newRelWithIndex);
+        this.#map.set(addr, newRelWithIndex);
 
         // No need to update added list, as address remains the same
         // Added relocs dont need to be tracked for modification, but originals do
-        const isAddedReloc = this.#added.has(+rel.addr);
-        if (!isAddedReloc) this.#modified.add(oldRel.index); // mark reloc as modified for proper saving
+        const isAddedReloc = this.#added.has(addr);
+        if (!isAddedReloc) this.#modified.set(oldRel.index, addr); // mark reloc as modified for proper saving
     }
 
     /**
