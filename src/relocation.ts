@@ -1,5 +1,5 @@
 import { RelocationFieldType, RelocationType } from './enums.js';
-import { uint8 } from './primitives.js';
+import { uint8, uint32, sint32 } from './primitives.js';
 import { Structs } from './structs.js';
 
 export interface RelocationInfo {
@@ -7,7 +7,34 @@ export interface RelocationInfo {
     type: uint8;         // info & 0xFF
 }
 
+type RelocationInitCommon = Pick<Structs.Relocation, 'addr'> & Pick<Partial<Structs.Relocation>, 'addend'>;
+type RelocationInit = RelocationInitCommon & ({
+    type?: RelocationType,
+    symbolIndex?: number,
+    info?: never, // mutually exclusive with type/symbolIndex
+} | Pick<Structs.Relocation, 'info'>);
+
+const DISALLOW_STRUCTURAL_MATCH = Symbol();
+
 export class Relocation extends Structs.Relocation {
+    constructor(init?: RelocationInit) {
+        super();
+        if (!init) return;
+
+        this.addr = new uint32(init.addr);
+        if (init.addend !== undefined) this.addend = new sint32(init.addend);
+        if ('info' in init) {
+            if ('type' in init || 'symbolIndex' in init) throw new TypeError(
+                `Relocation constructor initialization data fields "info" and "type"/"symbolIndex" are mutually exclusive.`
+            );
+            this.info = new uint32(init.info);
+        } else {
+            if ('type' in init) this.type = new uint8(init.type);
+            if ('symbolIndex' in init) this.symbolIndex = init.symbolIndex ?? 0;
+        }
+    }
+    readonly [DISALLOW_STRUCTURAL_MATCH]!: typeof DISALLOW_STRUCTURAL_MATCH;
+    
     get symbolIndex(): number { return <number>this.info >> 8; }
     get type(): uint8 { return <number>this.info & 0xFF; }
 
