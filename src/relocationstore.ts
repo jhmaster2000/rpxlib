@@ -1,6 +1,8 @@
 import { DataWrapper } from './datawrapper.js';
 import { Relocation } from './relocation.js';
 import { uint32 } from './primitives.js';
+import { SectionType } from './enums.js';
+import type { RelocationSection } from './sections.js';
 
 type RelocWithIndex = Relocation & { index: number };
 
@@ -12,6 +14,8 @@ type DirtyRelocRef = { idx: number } & (
     | { type: DirtyRelocType.DELETED }
     | { type: DirtyRelocType.MODIFIED, addr: number }
 );
+
+export const RELOC_PARSE_FAILED_SYMBOL = Symbol('@@RelocationStore.parse_failed');
 
 export class RelocationStore {
     /** Array of deleted relocations indexes */
@@ -25,8 +29,13 @@ export class RelocationStore {
     readonly #data: DataWrapper;
     /** The current highest free relocation index, used to track new indexes for added relocations */
     #nextFreeIndex: number;
+    
+    [RELOC_PARSE_FAILED_SYMBOL]?: true;
+    
+    constructor(parentSection: RelocationSection, data?: DataWrapper | null) {
+        this.rela = +parentSection.type === SectionType.Rela;
+        this.entSize = this.rela ? 12 : 8;
 
-    constructor(data?: DataWrapper | null, public readonly rela: boolean = true) {
         if (!data) {
             this.#data = new DataWrapper(new Uint8Array(0));
             this.#nextFreeIndex = 0;
@@ -40,14 +49,27 @@ export class RelocationStore {
             const relocation = new Relocation() as RelocWithIndex;
             relocation.addr = data.passUint32();
             relocation.info = data.passUint32();
-            if (rela) relocation.addend = data.passInt32();
+            if (this.rela) relocation.addend = data.passInt32();
 
             relocation.index = i;
             this.#map.set(+relocation.addr, relocation);
         }
+        const failed = this.count !== num;
+        if (failed) {
+            console.error(
+                `[rpxlib] ERROR: While parsing relocations of RelocationSection linked to section #${+parentSection.info}:\n` +
+                `         The number of parsed relocations (${this.count}) did not match the expected (${num}) relocations based on the section data size.\n` +
+                `         This is likely caused by duplicate relocations pointing to the same address in the same section.\n` +
+                `         rpxlib will treat this relocation section as UNPARSED and it will not be modifiable, and resaved as-is.`
+            );
+            const nullStore = new RelocationStore(parentSection, null);
+            Object.defineProperty(nullStore, RELOC_PARSE_FAILED_SYMBOL, { value: true });
+            return nullStore;
+        }
     }
 
-    public readonly entSize = this.rela ? 12 : 8;
+    public readonly rela: boolean;
+    public readonly entSize: 8 | 12;
 
     /** The number of relocations in this RelocationStore */
     get count() {

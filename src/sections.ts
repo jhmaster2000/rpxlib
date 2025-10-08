@@ -8,7 +8,7 @@ import { crc32 } from '@foxglove/crc';
 import { RPL } from './rpl.js';
 import Util from './util.js';
 import zlib from 'node:zlib';
-import { RelocationStore } from './relocationstore.js';
+import { RELOC_PARSE_FAILED_SYMBOL, RelocationStore } from './relocationstore.js';
 
 const SPECIAL_SECTIONS_STRINGS: Record<number, string> = {
     0x00000002: 'Symbol Table',
@@ -248,7 +248,7 @@ export class RelocationSection extends Section {
             Reflect.set(inputdata, 'fromSuper', true);
             super(inputdata, rpx);
             this.parsed = true;
-            this.relocations = inputdata.relocations ?? new RelocationStore(null, +inputdata.type === SectionType.Rela);
+            this.relocations = inputdata.relocations ?? new RelocationStore(this, null);
             if (
                 this.relocations.rela && +inputdata.type !== SectionType.Rela ||
                 !this.relocations.rela && +inputdata.type !== SectionType.Rel
@@ -258,7 +258,8 @@ export class RelocationSection extends Section {
         super(inputdata, rpx);
         if (!super.hasData) throw new Error('Relocation section cannot be empty.');
         this.parsed = parseRelocs;
-        this.relocations = new RelocationStore(parseRelocs ? new DataWrapper(super.data!) : null, +this.type === SectionType.Rela);
+        this.relocations = new RelocationStore(this, parseRelocs ? new DataWrapper(super.data!) : null);
+        if (this.relocations[RELOC_PARSE_FAILED_SYMBOL]) this.parsed = false; // Parsing failed
     }
 
     override set data(value: Uint8Array) {
@@ -276,8 +277,8 @@ export class RelocationSection extends Section {
         return new uint32(this.parsed ? this.relocations.size : super.data!.byteLength);
     }
 
-    parsed: boolean;
-    relocations: RelocationStore;
+    readonly parsed: boolean;
+    readonly relocations: RelocationStore;
 }
 
 export class RPLCrcSection extends Section {
