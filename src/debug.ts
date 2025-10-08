@@ -5,7 +5,7 @@ import {
     ProgramFlags, ProgramType,
     SectionFlags, SectionType,
 } from './enums.js';
-import { RelocationSection, RPLCrcSection, RPLFileInfoSection, StringSection, SymbolSection } from './sections.js';
+import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
 import { type int, sint16, sint32, sint8 } from './primitives.js';
 import { RPL } from './rpl.js';
 
@@ -268,6 +268,8 @@ interface DebugOptions {
     logSectionHeaders?: boolean;
     logSpecialSections?: boolean | SpecialSectionsOptions;
     logPerformance?: boolean;
+    /** Filters the output of logSectionHeaders and logSpecialSections to only show sections that pass this filter (truthy return). */
+    sectionFilter?(section: Section): boolean;
 }
 
 export function debug(rpx: RPL, options: DebugOptions = {}): void {
@@ -354,6 +356,9 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
         for (let i = 0; i < rpx.sections.length; i++) {
             perf = performance.now();
             const section = rpx.sections[i]!;
+            
+            if (!options.sectionFilter?.(section)) continue;
+            
             let str = '    ';
             str += i.toString().padEnd(2) + '  ';
             perfx = performance.now();
@@ -396,6 +401,8 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
         let perfList = performance.now();
         console.log('\n[Special Sections]');
         for (let i = 0; i < rpx.sections.length; i++) {
+            if (!options.sectionFilter?.(rpx.sections[i]!)) continue;
+            
             switch (+rpx.sections[i]!.type) {
                 case SectionType.StrTab: {
                     if (typeof specialSections !== 'boolean' && !specialSections.strings) break;
