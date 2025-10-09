@@ -1,69 +1,57 @@
-export const CodeBaseAddress = 0x02000000 as const;
-export const DataBaseAddress = 0x10000000 as const;
-export const LoadBaseAddress = 0xC0000000 as const;
+export const CodeBaseAddress = 0x02000000 as const; // executable memory region
+export const DataBaseAddress = 0x10000000 as const; // data memory region
+export const LoadBaseAddress = 0xC0000000 as const; // loader memory region
 
 export type TypedArray<T extends ArrayBufferLike = ArrayBufferLike> = Uint8Array<T> | Uint16Array<T> | Uint32Array<T> | Int8Array<T> | Int16Array<T> | Int32Array<T> | Float32Array<T> | Float64Array<T>;
 
 export type nybble = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
 
 export class uint8 extends Number {
-    constructor(x: number | string | int = 0) {
-        x = <number>x >>> 0;
-        if (x as number < 0) throw new RangeError(`u8 underflow: ${+x}`);
-        if (x as number > 255) throw new RangeError(`u8 overflow: ${+x}`);
+    constructor(value: number | int = 0) {
+        const x = +value;
+        if ((x & 0xFF) !== x) throw new RangeError(`u8 out of range: ${x}`);
         super(x);
     }
 }
 
 export class uint16 extends Number {
-    constructor(x: number | string | int = 0) {
-        x = <number>x >>> 0;
-        if (x as number < 0) throw new RangeError(`u16 underflow: ${+x}`);
-        if (x as number > 65535) throw new RangeError(`u16 overflow: ${+x}`);
+    constructor(value: number | int = 0) {
+        const x = +value;
+        if ((x & 0xFFFF) !== x) throw new RangeError(`u16 out of range: ${x}`);
         super(x);
     }
 }
 
 export class uint32 extends Number {
-    constructor(x: number | string | int = 0) {
-        x = <number>x >>> 0;
-        if (x as number < 0) throw new RangeError(`u32 underflow: ${+x}`);
-        if (x as number > 4294967295) throw new RangeError(`u32 overflow: ${+x}`);
+    constructor(value: number | int = 0) {
+        const x = +value;
+        if (x >>> 0 !== x) throw new RangeError(`u32 out of range: ${x}`);
         super(x);
     }
 }
 
 export class sint8 extends Number {
-    constructor(x: number | string | int = 0) {
-        x = <number>x >> 0;
-        if (x as number < -128) throw new RangeError(`s8 underflow: ${+x}`);
-        if (x as number > 127) throw new RangeError(`s8 overflow: ${+x}`);
+    constructor(value: number | int = 0) {
+        const x = +value;
+        if ((x << 24 >> 24) !== x) throw new RangeError(`s8 out of range: ${x}`);
         super(x);
     }
 }
 
 export class sint16 extends Number {
-    constructor(x: number | string | int = 0) {
-        x = <number>x >> 0;
-        if (x as number < -32768) throw new RangeError(`s16 underflow: ${+x}`);
-        if (x as number > 32767) throw new RangeError(`s16 overflow: ${+x}`);
+    constructor(value: number | string | int = 0) {
+        const x = +value;
+        if ((x << 16 >> 16) !== x) throw new RangeError(`s16 out of range: ${x}`);
         super(x);
     }
 }
 
 export class sint32 extends Number {
-    constructor(x: number | string | int = 0) {
-        x = <number>x >> 0;
-        if (x as number < -2147483648) throw new RangeError(`s32 underflow: ${+x}`);
-        if (x as number > 2147483647) throw new RangeError(`s32 overflow: ${+x}`);
+    constructor(value: number | int = 0) {
+        const x = +value;
+        if ((x | 0) !== x) throw new RangeError(`s32 out of range: ${x}`);
         super(x);
     }
 }
 
-//type uint8 = number;
-//type uint16 = number;
-//type uint32 = number;
-//type sint8 = number;
-//type sint16 = number;
-//type sint32 = number;
 export type int = uint8 | uint16 | uint32 | sint8 | sint16 | sint32;
