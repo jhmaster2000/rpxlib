@@ -17,7 +17,7 @@ export class DataWrapper extends Uint8Array {
     passUint32(): uint32 {
         const v = this[this.pos]! << 24 | this[this.pos+1]! << 16 | this[this.pos+2]! << 8 | this[this.pos+3]!;
         this.pos += 4;
-        return new uint32(v);
+        return new uint32(v >>> 0);
     }
     passInt8(): sint8 {
         const v = this[this.pos++]!;
