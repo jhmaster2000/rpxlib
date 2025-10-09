@@ -132,10 +132,10 @@ export class RelocationStore {
         return dw;
     }
 
-    forEach(callback: (relocation: RelocWithIndex, addr: number) => void): void {
+    forEach(callback: (relocation: Readonly<Relocation>, addr: number) => void): void {
         this.#map.forEach((r, addr) => callback(r, addr));
     }
-    [Symbol.iterator]() {
+    [Symbol.iterator](): MapIterator<Readonly<Relocation>> {
         return this.#map.values();
     }
 
@@ -146,7 +146,7 @@ export class RelocationStore {
         return this.#map.has(+addr);
     }
 
-    get(addr: number | uint32): Relocation | undefined {
+    get(addr: number | uint32): Readonly<Relocation> | undefined {
         return this.#map.get(+addr);
     }
     
