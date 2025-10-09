@@ -35,12 +35,12 @@ export class Relocation extends Structs.Relocation {
     }
     readonly [DISALLOW_STRUCTURAL_MATCH]!: typeof DISALLOW_STRUCTURAL_MATCH;
     
-    get symbolIndex(): number { return <number>this.info >> 8; }
+    get symbolIndex(): number { return <number>this.info >>> 8; }
     get type(): uint8 { return <number>this.info & 0xFF; }
 
     set symbolIndex(symbolIndex: number) {
         if (symbolIndex < 0x00 || symbolIndex > 0xFFFFFF) throw new RangeError(`24-bit value out of range: ${symbolIndex}`);
-        this.info = (symbolIndex << 8) + (<number>this.info & 0xFF);
+        this.info = ((symbolIndex << 8) + (<number>this.info & 0xFF)) >>> 0;
     }
     set type(type: uint8) {
         this.info = (<number>this.info & 0xFFFFFF00) + <number>type;
