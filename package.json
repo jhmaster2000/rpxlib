@@ -17,7 +17,7 @@
     "homepage": "https://github.com/jhmaster2000/rpxlib#readme",
     "repository": {
         "type": "git",
-        "url": "https://github.com/jhmaster2000/rpxlib"
+        "url": "git+https://github.com/jhmaster2000/rpxlib.git"
     },
     "devDependencies": {
         "@types/node": "^24.6.1",
