@@ -373,6 +373,14 @@ export class RPLFileInfoSection extends Section {
 
     override get data(): ReadonlyDataWrapper {
         const buffer = new DataWrapper(Buffer.allocUnsafe(0x60));
+        const hasStrings = this.strings.size > 0;
+        
+        // Fix stringsOffset according to the strings data we actually have or not.
+        // If strings were removed, we will discard any offset and replace it with 0.
+        // If strings were added, we will fixup the offset from 0 to 0x60, but not any other value.
+        // This means if strings are present and the offset was manually set to a value >0 but <0x60 an error will still be thrown.
+        this.fileinfo.stringsOffset = hasStrings ? (+this.fileinfo.stringsOffset || 0x60) : 0;
+        
         buffer.dropUint16(this.fileinfo.magic);
         buffer.dropUint16(this.fileinfo.version);
         buffer.dropUint32(this.fileinfo.textSize);
@@ -399,15 +407,32 @@ export class RPLFileInfoSection extends Section {
         buffer.dropUint16(this.fileinfo.tlsModuleIndex);
         buffer.dropUint16(this.fileinfo.tlsAlignShift);
         buffer.dropUint32(this.fileinfo.runtimeFileInfoSize);
+        
+        if (!hasStrings) return new ReadonlyDataWrapper(buffer);
+
+        const paddingBytesBeforeStringsBegin = <number>this.fileinfo.stringsOffset - 0x60;
+        if (paddingBytesBeforeStringsBegin < 0) throw new Error(
+            `RPLFileInfoSection serialization error: Strings are attached, but their requested offset (0x${this.fileinfo.stringsOffset.toString(16)}) is invalid.`
+        );
+
         return new ReadonlyDataWrapper(Buffer.concat([
-            buffer, new Uint8Array(<number>this.fileinfo.stringsOffset - 0x60), this.strings.buffer
+            buffer, new Uint8Array(paddingBytesBeforeStringsBegin), this.strings.buffer
         ]));
     }
     override get hasData(): true {
         return true;
     }
     override get size(): uint32 {
-        return new uint32(0x60 + (<number>this.fileinfo.stringsOffset - 0x60) + this.strings.size);
+        const hasStrings = this.strings.size > 0;
+        this.fileinfo.stringsOffset = hasStrings ? (+this.fileinfo.stringsOffset || 0x60) : 0; // See get buffer() above
+
+        const paddingBytesBeforeStringsBegin = <number>this.fileinfo.stringsOffset - 0x60;
+        if (hasStrings && paddingBytesBeforeStringsBegin < 0) throw new Error(
+            `RPLFileInfoSection serialization error: Strings are attached, but their requested offset (0x${this.fileinfo.stringsOffset.toString(16)}) is invalid.`
+        );
+        return new uint32(
+            0x60 + (hasStrings ? (paddingBytesBeforeStringsBegin + this.strings.size) : 0)
+        );
     }
 
     /** These are not the actual sizes stored on the section,
