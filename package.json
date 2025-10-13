@@ -27,7 +27,7 @@
         "typescript-eslint": "8.44"
     },
     "dependencies": {
-        "@foxglove/crc": "^0.0.3"
+        "@foxglove/crc": "^1.0.1"
     },
     "engines": {
         "node": ">=20.2.0"
