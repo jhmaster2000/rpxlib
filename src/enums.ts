@@ -547,3 +547,11 @@ export enum RelocationFieldType {
     (for example, the immediate field of an "Add Immediate" instruction). */
     half16 = 5, //! size: 2
 }
+
+/** RPL File Info flags //! uint32 */
+export enum RPLFileInfoFlags {
+    None      = 0x00000000,
+    Unknown_1 = 0x00000001,
+    /** If unset, implies file is an RPL, there is no explicit "IsRPL" flag. */
+    IsRPX     = 0x00000002,
+}

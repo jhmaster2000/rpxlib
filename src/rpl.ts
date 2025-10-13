@@ -4,7 +4,7 @@ import Util from './util.js';
 import { crc32 } from '@foxglove/crc';
 import { Header } from './header.js';
 import { DataSink } from './datasink.js';
-import { ABI, ISA, SectionFlags, SectionType, Type } from './enums.js';
+import { ABI, ISA, RPLFileInfoFlags, SectionFlags, SectionType, Type } from './enums.js';
 import { sint32, uint16, uint32, uint8 } from './primitives.js';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
 import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
@@ -15,10 +15,12 @@ interface RPLSaveOptions {
      *
      * This is useful for compressing ELF files back to RPX/RPL without manually selecting sections to compress.
      *
-     * A value of `false` for `compression` parameter has higher priority than this. */
+     * A value of `false` for `compression` parameter has higher priority than this. @default false */
     compressAsPossible?: boolean;
-    /** Ignore program headers/segments and force saving anyway without them. */
+    /** Ignore program headers/segments and force saving anyway without them. @default false */
     forceIgnoreSegments?: boolean;
+    /** Enable/disable automatic assignment of the appropriate file extension to the given output path. @default true */
+    automaticFileExtension?: boolean;
 }
 
 interface RPLParseOptions {
@@ -106,7 +108,9 @@ export class RPL extends Header {
     /**
      * Saves the RPL/RPX to a file.
      * @param filepath The path to the output file without an extension.
-     * The extension will be automatically determined based on the `compression` argument.
+     * The extension will be automatically determined based on the ELF type.
+     * 
+     * Automatic extension assignment can be disabled with the `automaticFileExtension: false` option.
      * @param compression The compression level to use on sections with the `Compressed` flag enabled.
      * - `false` disables compression (default).
      * - `true` uses the level in the RPL File Info section or `-1` if there isn't one.
@@ -124,6 +128,8 @@ export class RPL extends Header {
                 '         Program headers will be stripped out and the file may be corrupt!'
             );
         }
+        options.compressAsPossible ??= false;
+        options.automaticFileExtension ??= true;
 
         const headers = new DataWrapper(Buffer.allocUnsafe(
             <number>this.headerSize
@@ -158,8 +164,6 @@ export class RPL extends Header {
             if (compression === true) compression = <CompressionLevel>+fileinfoSection.fileinfo.compressionLevel;
             else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? 0 : compression);
         } else if (compression === true) compression = -1;
-
-        options.compressAsPossible ??= false;
 
         let crcsOffset = 0;
         let crcs: number[] = [];
@@ -277,8 +281,23 @@ export class RPL extends Header {
             if (crcsOffset !== 0) file.set(crcs, crcsOffset);
             else throw new Error('Cannot save RPL, no RPL CRCs section found.');
         }
+        
+        let extension = '';
+        if (options.automaticFileExtension) {
+            switch (+this.type) {
+                case Type.RPL: {
+                    const isRPX = (<number>this.fileinfoSection!.fileinfo.flags & RPLFileInfoFlags.IsRPX) !== 0;
+                    extension = isRPX ? '.rpx' : '.rpl';
+                    break;
+                }
+                case Type.Dyn: extension = '.so'; break;
+                case Type.Rel: extension = '.o'; break;
 
-        filepath = Util.resolve(+this.type !== Type.RPL ? filepath : `${filepath}.${compression === false ? 'elf' : 'rpx'}`);
+                default: extension = '.elf'; break; // Type.Exec
+            }
+        }
+
+        filepath = Util.resolve(filepath + extension);
         fs.writeFileSync(filepath, file);
         return { filepath, filedata: file };
     }
