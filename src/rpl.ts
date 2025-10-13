@@ -303,9 +303,36 @@ export class RPL extends Header {
 
     // Helper methods
 
-    get shstrSection(): StringSection { return this.#sections[+this._shstrIndex] as StringSection; }
-    get crcSection(): RPLCrcSection { return this.#sections.at(-2)! as RPLCrcSection; }
-    get fileinfoSection(): RPLFileInfoSection { return this.#sections.at(-1)! as RPLFileInfoSection; }
+    /** Returns the Section Headers String Table section, an ELF is not valid without one so it is always present. */
+    get shstrSection(): StringSection {
+        return this.#sections[+this._shstrIndex] as StringSection;
+    }
+    /** Returns the RPL CRCs section, or `null` if the ELF type is not `RPL`.
+     * 
+     * If the section cannot be found and the ELF type **is** `RPL`, an error is thrown. */
+    get crcSection(): RPLCrcSection | null {
+        if (+this.type !== Type.RPL) return null;
+        const section = this.#sections.at(-2);
+        if (section instanceof RPLCrcSection) return section;
+        // Error
+        const expectedIdx = this.#sections.length - 2;
+        const exists = this.#sections.find(s => +s.type === SectionType.RPLCrcs);
+        if (exists) throw new Error(`ELF type is RPL but RPLCrcs section is misplaced! Expected at penultimate index (${expectedIdx}), found at ${exists.index}.`);
+        throw new Error(`ELF type is RPL but RPLCrcs section is missing! Expected at penultimate index (${expectedIdx}).`);
+    }
+    /** Returns the RPL File Info section, or `null` if the ELF type is not `RPL`.
+     * 
+     * If the section cannot be found and the ELF type **is** `RPL`, an error is thrown. */
+    get fileinfoSection(): RPLFileInfoSection | null {
+        if (+this.type !== Type.RPL) return null;
+        const section = this.#sections.at(-1);
+        if (section instanceof RPLFileInfoSection) return section;
+        // Error
+        const expectedIdx = this.#sections.length - 1;
+        const exists = this.#sections.find(s => +s.type === SectionType.RPLFileInfo);
+        if (exists) throw new Error(`ELF type is RPL but RPLFileInfo section is misplaced! Expected at last index (${expectedIdx}), found at ${exists.index}.`);
+        else throw new Error(`ELF type is RPL but RPLFileInfo section is missing! Expected at last index (${expectedIdx}).`);
+    }
 
     get addressRanges() {
         let used: [number, number][] = [];
