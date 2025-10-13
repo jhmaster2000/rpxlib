@@ -7,7 +7,9 @@ export class Header extends Structs.Header {
         super();
         if (+file.passUint32() !== +this.magic) throw new Error('The data provided is not an ELF file.');
         this.class = file.passUint8() as Class;
+        if (+this.class !== Class.ELF32) throw new Error('64-bit ELFs are not supported.');
         this.endian = file.passUint8() as Endian;
+        if (+this.endian !== Endian.Big) throw new Error('Little Endian ELFs are not supported.');
         this.version = file.passUint8() as Version;
         this.abi = file.passUint8() as ABI;
         this.abiVersion = file.passUint8();
@@ -30,10 +32,10 @@ export class Header extends Structs.Header {
     override readonly class;
     override readonly endian;
     //override readonly version;
-    override readonly abi;
+    //override readonly abi;
     //override readonly abiVersion;
-    override readonly type;
-    override readonly isa;
+    //override readonly type;
+    //override readonly isa;
     //override readonly isaVersion;
     //override readonly isaFlags;
     //override readonly entryPoint;
