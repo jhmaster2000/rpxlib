@@ -252,6 +252,7 @@ export class RPL extends Header {
                         } else {
                             sectionSize = compressed.byteLength;
                             currOffset += <number>sectionSize;
+                            (<number>section.flags) |= SectionFlags.Compressed;
                             writeSectionDataAndCRC(i, sectionOffset, uncompressed, compressed); // Proper compressed section saving
                         }
                     }
