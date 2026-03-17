@@ -20,11 +20,11 @@
         "url": "git+https://github.com/jhmaster2000/rpxlib.git"
     },
     "devDependencies": {
-        "@types/node": "^24.6.1",
-        "eslint": "9.36",
-        "eslint-plugin-unicorn": "^61.0.2",
-        "typescript": "^5.9.2",
-        "typescript-eslint": "8.44"
+        "@types/node": "^24.12.0",
+        "eslint": "^10.0.3",
+        "eslint-plugin-unicorn": "^63.0.0",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.57.1"
     },
     "dependencies": {
         "@foxglove/crc": "^1.0.1"
