@@ -4,7 +4,6 @@ import { SectionFlags, SectionType } from './enums.js';
 import { StringStore } from './stringstore.js';
 import { ELFSymbol } from './symbol.js';
 import { Structs } from './structs.js';
-import { crc32 } from '@foxglove/crc';
 import { RPL } from './rpl.js';
 import Util from './util.js';
 import zlib from 'node:zlib';
@@ -119,11 +118,11 @@ export class Section extends Structs.Section {
     get crc32Hash(): uint32 {
         if (this.data instanceof ReadonlyDataWrapper) {
             const data = ReadonlyDataWrapper['@@unlock'](this.data);
-            const hash = new uint32(crc32(data));
+            const hash = new uint32(zlib.crc32(data));
             ReadonlyDataWrapper['@@lock'](data);
             return hash;
         } else {
-            return new uint32(this.hasData ? crc32(this.data!) : 0x00000000);
+            return new uint32(this.hasData ? zlib.crc32(this.data!) : 0x00000000);
         }
     }
 

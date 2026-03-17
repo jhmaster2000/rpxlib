@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 import Util from './util.js';
-import { crc32 } from '@foxglove/crc';
 import { Header } from './header.js';
 import { DataSink } from './datasink.js';
 import { ABI, ISA, RPLFileInfoFlags, SectionFlags, SectionType, Type } from './enums.js';
@@ -185,9 +184,11 @@ export class RPL extends Header {
                     let crc: number;
                     if (uncompressedData instanceof ReadonlyDataWrapper) {
                         ReadonlyDataWrapper['@@unlock'](uncompressedData);
-                        crc = crc32(uncompressedData);
+                        crc = zlib.crc32(uncompressedData);
                         ReadonlyDataWrapper['@@lock'](uncompressedData);
-                    } else crc = crc32(uncompressedData);
+                    }
+                    else crc = zlib.crc32(uncompressedData);
+
                     crcs[ix  ] = crc >> 24 & 0xFF;
                     crcs[ix+1] = crc >> 16 & 0xFF;
                     crcs[ix+2] = crc >>  8 & 0xFF;
