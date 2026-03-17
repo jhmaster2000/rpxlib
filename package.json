@@ -20,9 +20,11 @@
         "url": "git+https://github.com/jhmaster2000/rpxlib.git"
     },
     "devDependencies": {
+        "@eslint/js": "^10.0.1",
         "@types/node": "^24.12.0",
         "eslint": "^10.0.3",
         "eslint-plugin-unicorn": "^63.0.0",
+        "globals": "^17.4.0",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.57.1"
     },
