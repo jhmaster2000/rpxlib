@@ -8,6 +8,7 @@ import { sint32, uint16, uint32, uint8 } from './primitives.js';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
 import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
 import { Program } from './programs.js';
+import { ELFSymbol } from './symbol.js';
 
 interface RPLSaveOptions {
     /** Ignore `Compressed` flags and just try to compress all compressable sections.
@@ -399,7 +400,6 @@ export class RPL extends Header {
         return section;
     }
 
-    // TODO: it shouldn't leave the file in an invalid state if it throws
     /**
      * RPXLib attempts to be as safe and prevent removing sections that are required or referenced by other sections,
      * but it's not perfect and it may be possible to remove a section that is referenced by another section through means that RPXLib doesn't check for.
@@ -407,7 +407,7 @@ export class RPL extends Header {
      * Usage of this method takes responsibility for any issues that may arise from removing a section that is referenced by another section.
      * RPXLib will no longer be able to guarantee the validity of the file after this method is used.
      * 
-     * **Important**: This method may throw on error, if it does, the file will be left in an invalid state and should no longer be used.
+     * **Important**: If this method throws an error, any changes made to the ELF for section removal are reverted.
      * 
      * @param section The section to remove.
      * @param stubMode If `true`, RPXLib will simply stub over the section with a null section instead of removing it.
@@ -421,28 +421,51 @@ export class RPL extends Header {
             if (section === this.fileinfoSection) throw new Error('Cannot remove section, it is the RPL File Info section.');
         }
 
+        let dirtyRelocSections: RelocationSection[] = [];
+        let dirtySymbols: ELFSymbol[] = [];
+        let dirtyLinkedSections: Section[] = [];
+        const restoreFileState = () => {
+            for (const sect of dirtyRelocSections) sect.info = new uint32(+sect.info + 1);
+            for (const sym of dirtySymbols) sym.shndx = new uint16(+sym.shndx + 1);
+            for (const sect of dirtyLinkedSections) sect.link = new uint32(+sect.link + 1);
+        };
+
         for (let i = 0; i < this.#sections.length; i++) {
             const sect = this.#sections[i]!;
             if (sect.linkedSection === section) {
+                restoreFileState();
                 throw new Error(`Cannot remove section, it is linked to by section #${i} (${sect.name}).`);
             }
+
             if (sect instanceof RelocationSection) {
                 if (+sect.info === section.index) {
+                    restoreFileState();
                     throw new Error(`Cannot remove section, it is referenced by relocation section #${i} (${sect.name}).`);
                 }
-                if (!stubMode && +sect.info > section.index) sect.info = new uint32(+sect.info - 1);
+                if (!stubMode && +sect.info > section.index) {
+                    sect.info = new uint32(+sect.info - 1);
+                    dirtyRelocSections.push(sect);
+                }
             }
+
             else if (sect instanceof SymbolSection) {
                 for (let si = 0; si < sect.symbols.length; si++) {
                     const sym = sect.symbols[si]!;
                     if (section.index && +sym.shndx === section.index) {
+                        restoreFileState();
                         throw new Error(`Cannot remove section, it is referenced by symbol #${si} (${sym.name}) in section #${sect.index} (${sect.name}).`);
                     }
-                    if (!stubMode && +sym.shndx > section.index) sym.shndx = new uint16(+sym.shndx - 1);
+                    if (!stubMode && +sym.shndx > section.index) {
+                        sym.shndx = new uint16(+sym.shndx - 1);
+                        dirtySymbols.push(sym);
+                    }
                 }
             }
 
-            if (!stubMode && +sect.link > section.index) sect.link = new uint32(+sect.link - 1);
+            if (!stubMode && +sect.link > section.index) {
+                sect.link = new uint32(+sect.link - 1);
+                dirtyLinkedSections.push(sect);
+            }
         }
 
         if (!stubMode) {
