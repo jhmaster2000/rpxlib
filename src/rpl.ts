@@ -4,11 +4,11 @@ import Util from './util.js';
 import { Header } from './header.js';
 import { DataSink } from './datasink.js';
 import { ABI, ISA, RPLFileInfoFlags, SectionFlags, SectionType, Type } from './enums.js';
-import { sint32, uint16, uint32, uint8 } from './primitives.js';
+import { sint32, uint16, uint32, type uint8 } from './primitives.js';
 import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
 import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
 import { Program } from './programs.js';
-import { ELFSymbol } from './symbol.js';
+import { type ELFSymbol } from './symbol.js';
 
 interface RPLSaveOptions {
     /** Ignore `Compressed` flags and just try to compress all compressable sections.

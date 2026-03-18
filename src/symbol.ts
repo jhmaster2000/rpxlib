@@ -1,5 +1,5 @@
-import { SymbolBinding, SymbolType, SymbolVisibility } from './enums.js';
-import { StringSection, SymbolSection } from './sections.js';
+import type { SymbolBinding, SymbolType, SymbolVisibility } from './enums.js';
+import type { StringSection, SymbolSection } from './sections.js';
 import { Structs } from './structs.js';
 
 export class ELFSymbol extends Structs.Symbol {

@@ -5,9 +5,9 @@ import {
     ProgramFlags, ProgramType,
     SectionFlags, SectionType,
 } from './enums.js';
-import { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
-import { type int, sint16, sint32, sint8 } from './primitives.js';
-import { RPL } from './rpl.js';
+import type { RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
+import type { int, sint16, sint32, sint8 } from './primitives.js';
+import type { RPL } from './rpl.js';
 
 function log<T>(label: string, value: T, formatter: (v: T) => string = String, parenFormatter?: (v: T) => string, endline = true) {
     process.stdout.write(

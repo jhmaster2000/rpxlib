@@ -124,6 +124,11 @@ export default tseslint.config(
                 'prefer-return-this-type': 'off',
                 'adjacent-overload-signatures': 'off',
                 'consistent-indexed-object-style': 'off',
+                'consistent-type-imports': ['error', {
+                    disallowTypeAnnotations: true,
+                    fixStyle: 'inline-type-imports',
+                    prefer: 'type-imports',
+                }],
             }),
         },
     },
@@ -135,7 +140,7 @@ export default tseslint.config(
 
 /**
  * @param {string} pluginNamespace
- * @param {tseslint.ConfigWithExtends['rules']} rulesObj */
+ * @param {import('eslint').Linter.RulesRecord} rulesObj */
 function pluginRules(pluginNamespace, rulesObj = {}) {
     if (!pluginNamespace) throw new Error("ESLint config: pluginRules() called with no namespace.");
 

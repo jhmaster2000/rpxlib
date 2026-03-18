@@ -4,7 +4,7 @@ import { SectionFlags, SectionType } from './enums.js';
 import { StringStore } from './stringstore.js';
 import { ELFSymbol } from './symbol.js';
 import { Structs } from './structs.js';
-import { RPL } from './rpl.js';
+import { type RPL } from './rpl.js';
 import Util from './util.js';
 import zlib from 'node:zlib';
 import { RELOC_PARSE_FAILED_SYMBOL, RelocationStore } from './relocationstore.js';

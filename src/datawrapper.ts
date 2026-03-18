@@ -120,7 +120,7 @@ export class ReadonlyDataWrapper extends DataWrapper {
     /** @internal For internal APIs */
     protected get '@@arraybuffer'(): ArrayBuffer { return super.buffer; }
     override get buffer(): never { throw new Error('Cannot access writable ArrayBuffer of ReadonlyDataWrapper instance.'); }
-    toReversed(): ReadonlyDataWrapper { return new ReadonlyDataWrapper(new Uint8Array(this).reverse()); }
+    override toReversed(): ReadonlyDataWrapper { return new ReadonlyDataWrapper(new Uint8Array(this).reverse()); }
     override reverse(): Discarded { throw new Error('Illegal call to ReadonlyDataWrapper.reverse'); }
     override set(...$: Discarded): void { return; }
     override slice(start?: number, end?: number) { return new ReadonlyDataWrapper(super.slice(start, end)); }

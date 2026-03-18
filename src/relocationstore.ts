@@ -1,7 +1,7 @@
 import { DataWrapper } from './datawrapper.js';
 import { Relocation } from './relocation.js';
-import { uint32 } from './primitives.js';
 import { SectionType } from './enums.js';
+import type { uint32 } from './primitives.js';
 import type { RelocationSection } from './sections.js';
 
 type RelocWithIndex = Relocation & { index: number };
