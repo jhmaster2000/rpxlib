@@ -311,7 +311,7 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
 
     if (options.logProgramHeaders) {
         let perfx: number;
-        let perfList = performance.now();
+        const perfList = performance.now();
         console.log('\n[Segments]');
         console.log('    ##  Type                            Offset      Virt.Addr.  Phys.Addr.  File Size   Mem. Size   Flags             Align');
         for (let i = 0; i < rpx.programs.length; i++) {
@@ -350,7 +350,7 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
 
     if (options.logSectionHeaders) {
         let perfx: number;
-        let perfList = performance.now();
+        const perfList = performance.now();
         console.log('\n[Sections]');
         console.log('    ##  Name                      Type                            Virt.Addr.  Offset      Size        Ent. Size   Link  Info        Align       Flags');
         for (let i = 0; i < rpx.sections.length; i++) {
@@ -398,7 +398,7 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
     }
 
     if (specialSections) {
-        let perfList = performance.now();
+        const perfList = performance.now();
         console.log('\n[Special Sections]');
         for (let i = 0; i < rpx.sections.length; i++) {
             if (!options.sectionFilter?.(rpx.sections[i]!)) continue;

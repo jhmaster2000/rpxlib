@@ -166,7 +166,7 @@ export class RPL extends Header {
         } else if (compression === true) compression = -1;
 
         let crcsOffset = 0;
-        let crcs: number[] = [];
+        const crcs: number[] = [];
         let currOffset = <number>this.headerSize
             //+ <number>this.programHeadersEntrySize * this.#programs.length
             + <number>this.sectionHeadersEntrySize * this.#sections.length;
@@ -350,7 +350,7 @@ export class RPL extends Header {
     }
 
     get addressRanges() {
-        let used: [number, number][] = [];
+        const used: [number, number][] = [];
         this.#sections.forEach(section => {
             if (+section.addr === 0) return;
             used.push([+section.addr, Util.roundUp(+section.addr + +section.size, +section.addrAlign)]);
@@ -358,7 +358,7 @@ export class RPL extends Header {
         used.sort((a, b) => a[0] - b[0]);
 
         let last = 0;
-        let free: [number, number][] = [];
+        const free: [number, number][] = [];
         used.forEach(([start, end], i) => {
             if (last > start) { last = start; used[i-1]![1] = last; }
             if (last === start) return last = end;
@@ -414,9 +414,9 @@ export class RPL extends Header {
             if (section === this.fileinfoSection) throw new Error('Cannot remove section, it is the RPL File Info section.');
         }
 
-        let dirtyRelocSections: RelocationSection[] = [];
-        let dirtySymbols: ELFSymbol[] = [];
-        let dirtyLinkedSections: Section[] = [];
+        const dirtyRelocSections: RelocationSection[] = [];
+        const dirtySymbols: ELFSymbol[] = [];
+        const dirtyLinkedSections: Section[] = [];
         const restoreFileState = () => {
             for (const sect of dirtyRelocSections) sect.info = new uint32(+sect.info + 1);
             for (const sym of dirtySymbols) sym.shndx = new uint16(+sym.shndx + 1);
