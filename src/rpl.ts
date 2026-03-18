@@ -182,14 +182,7 @@ export class RPL extends Header {
             } else {
                 datasink.write(compressedData ?? uncompressedData);
                 if (+this.type === Type.RPL) {
-                    let crc: number;
-                    if (uncompressedData instanceof ReadonlyDataWrapper) {
-                        ReadonlyDataWrapper['@@unlock'](uncompressedData);
-                        crc = zlib.crc32(uncompressedData);
-                        ReadonlyDataWrapper['@@lock'](uncompressedData);
-                    }
-                    else crc = zlib.crc32(uncompressedData);
-
+                    const crc: number = zlib.crc32(uncompressedData);
                     crcs[ix  ] = crc >> 24 & 0xFF;
                     crcs[ix+1] = crc >> 16 & 0xFF;
                     crcs[ix+2] = crc >>  8 & 0xFF;

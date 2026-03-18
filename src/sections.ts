@@ -116,14 +116,7 @@ export class Section extends Structs.Section {
     }
 
     get crc32Hash(): uint32 {
-        if (this.data instanceof ReadonlyDataWrapper) {
-            const data = ReadonlyDataWrapper['@@unlock'](this.data);
-            const hash = new uint32(zlib.crc32(data));
-            ReadonlyDataWrapper['@@lock'](data);
-            return hash;
-        } else {
-            return new uint32(this.hasData ? zlib.crc32(this.data!) : 0x00000000);
-        }
+        return new uint32(this.hasData ? zlib.crc32(this.data!) : 0x00000000);
     }
 
     get data(): Uint8Array | null {
