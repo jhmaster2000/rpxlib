@@ -312,7 +312,7 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
     if (options.logProgramHeaders) {
         let perfx: number;
         const perfList = performance.now();
-        console.log('\n[Segments]');
+        console.log('\n[Segments]', rpx.programs.length);
         console.log('    ##  Type                            Offset      Virt.Addr.  Phys.Addr.  File Size   Mem. Size   Flags             Align');
         for (let i = 0; i < rpx.programs.length; i++) {
             perf = performance.now();
@@ -351,13 +351,13 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
     if (options.logSectionHeaders) {
         let perfx: number;
         const perfList = performance.now();
-        console.log('\n[Sections]');
+        console.log('\n[Sections]', rpx.sections.length);
         console.log('    ##  Name                      Type                            Virt.Addr.  Offset      Size        Ent. Size   Link  Info        Align       Flags');
         for (let i = 0; i < rpx.sections.length; i++) {
             perf = performance.now();
             const section = rpx.sections[i]!;
             
-            if (!options.sectionFilter?.(section)) continue;
+            if (options.sectionFilter && !options.sectionFilter(section)) continue;
             
             let str = '    ';
             str += i.toString().padEnd(2) + '  ';
@@ -401,7 +401,7 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
         const perfList = performance.now();
         console.log('\n[Special Sections]');
         for (let i = 0; i < rpx.sections.length; i++) {
-            if (!options.sectionFilter?.(rpx.sections[i]!)) continue;
+            if (options.sectionFilter && !options.sectionFilter(rpx.sections[i]!)) continue;
             
             switch (+rpx.sections[i]!.type) {
                 case SectionType.StrTab: {
