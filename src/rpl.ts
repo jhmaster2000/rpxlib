@@ -10,28 +10,30 @@ import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Se
 import { Program } from './programs.js';
 import { type ELFSymbol } from './symbol.js';
 
-interface RPLSaveOptions {
-    /** Ignore `Compressed` flags and just try to compress all compressable sections.
-     *
-     * This is useful for compressing ELF files back to RPX/RPL without manually selecting sections to compress.
-     *
-     * A value of `false` for `compression` parameter has higher priority than this. @default false */
-    compressAsPossible?: boolean;
-    /** Ignore program headers/segments and force saving anyway without them. @default false */
-    forceIgnoreSegments?: boolean;
-    /** Enable/disable automatic assignment of the appropriate file extension to the given output path. @default true */
-    automaticFileExtension?: boolean;
-}
+export namespace RPL {
+    export interface ParseOptions {
+        /** @warning Makes initial RPL parsing **considerably slower** if the file contains very large relocation sections */
+        parseRelocs?: boolean;
+    }
 
-interface RPLParseOptions {
-    /** @warning Makes initial RPL parsing **considerably slower** if the file contains very large relocation sections */
-    parseRelocs?: boolean;
-}
+    export interface SaveOptions {
+        /** Ignore `Compressed` flags and just try to compress all compressable sections.
+         *
+         * This is useful for compressing ELF files back to RPX/RPL without manually selecting sections to compress.
+         *
+         * A value of `false` for `compression` parameter has higher priority than this. @default false */
+        compressAsPossible?: boolean;
+        /** Ignore program headers/segments and force saving anyway without them. @default false */
+        forceIgnoreSegments?: boolean;
+        /** Enable/disable automatic assignment of the appropriate file extension to the given output path. @default true */
+        automaticFileExtension?: boolean;
+    }
 
-type CompressionLevel = -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+    export type ZlibCompressionLevel = -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+}
 
 export class RPL extends Header {
-    constructor(data: Uint8Array, opts: RPLParseOptions = {}) {
+    constructor(data: Uint8Array, opts: RPL.ParseOptions = {}) {
         const file = new DataWrapper(data);
         super(file);
 
@@ -117,7 +119,7 @@ export class RPL extends Header {
      * - `-1` uses the default zlib compression level of `6`.
      * - `0` disables compression but still wraps the data in a zlib header and footer.
      */
-    save(filepath: string, compression: boolean | CompressionLevel = false, options: RPLSaveOptions = {}) {
+    save(filepath: string, compression: boolean | RPL.ZlibCompressionLevel = false, options: RPL.SaveOptions = {}) {
         if (+this.programHeadersEntryCount !== 0) {
             if (!options.forceIgnoreSegments) throw new Error(
                 'Cannot save file, program headers saving is not yet supported.\n' +
@@ -161,7 +163,7 @@ export class RPL extends Header {
         if (+this.type === Type.RPL) {
             const fileinfoSection = this.#sections.find(s => s instanceof RPLFileInfoSection);
             if (!fileinfoSection) throw new Error('Cannot save RPL, no RPL File Info section found.');
-            if (compression === true) compression = <CompressionLevel>+fileinfoSection.fileinfo.compressionLevel;
+            if (compression === true) compression = <RPL.ZlibCompressionLevel>+fileinfoSection.fileinfo.compressionLevel;
             else fileinfoSection.fileinfo.compressionLevel = new sint32(compression === false ? 0 : compression);
         } else if (compression === true) compression = -1;
 
