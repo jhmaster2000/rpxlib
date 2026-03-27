@@ -394,7 +394,7 @@ export class RPL extends Header {
     }
 
     /**
-     * RPXLib attempts to be as safe and prevent removing sections that are required or referenced by other sections,
+     * RPXLib attempts to be as safe as possible and prevent removing sections that are required or referenced by other sections,
      * but it's not perfect and it may be possible to remove a section that is referenced by another section through means that RPXLib doesn't check for.
      * 
      * Usage of this method takes responsibility for any issues that may arise from removing a section that is referenced by another section.
@@ -403,7 +403,7 @@ export class RPL extends Header {
      * **Important**: If this method throws an error, any changes made to the ELF for section removal are reverted.
      * 
      * @param section The section to remove.
-     * @param stubMode If `true`, RPXLib will simply stub over the section with a null section instead of removing it.
+     * @param stubMode If `true`, the section will simply be replaced with a stub null section instead of removing it.
      * This is useful for avoiding shifting section indices.
      */
     removeSection(section: Section, stubMode = false) {
