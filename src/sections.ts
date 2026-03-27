@@ -170,7 +170,7 @@ export class StringSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        return new ReadonlyDataWrapper(this.strings.buffer);
+        return ReadonlyDataWrapper.wrap(this.strings.buffer);
     }
     override get hasData(): true {
         return true;
@@ -193,7 +193,7 @@ export class SymbolSection extends Section {
         }
         super(inputdata, rpx);
         if (!super.hasData) throw new Error('Symbol section cannot be empty.');
-        const data = new DataWrapper(super.data!);
+        const data = DataWrapper.wrap(super.data!);
         const num = super.data!.byteLength / (<number>this.entSize);
 
         this.symbols = [];
@@ -210,7 +210,7 @@ export class SymbolSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(Buffer.allocUnsafe(<number>this.entSize * this.symbols.length));
+        const buffer = DataWrapper.wrap(Buffer.allocUnsafe(<number>this.entSize * this.symbols.length));
         for (const sym of this.symbols) {
             buffer.dropUint32(sym.nameOffset);
             buffer.dropUint32(sym.value);
@@ -219,7 +219,7 @@ export class SymbolSection extends Section {
             buffer.dropUint8(sym.other);
             buffer.dropUint16(sym.shndx);
         }
-        return new ReadonlyDataWrapper(buffer);
+        return ReadonlyDataWrapper.wrap(buffer);
     }
     override get hasData(): true {
         return true;
@@ -250,7 +250,7 @@ export class RelocationSection extends Section {
         super(inputdata, rpx);
         if (!super.hasData) throw new Error('Relocation section cannot be empty.');
         this.parsed = parseRelocs;
-        this.relocations = new RelocationStore(this, parseRelocs ? new DataWrapper(super.data!) : null);
+        this.relocations = new RelocationStore(this, parseRelocs ? DataWrapper.wrap(super.data!) : null);
         if (this.relocations[RELOC_PARSE_FAILED_SYMBOL]) this.parsed = false; // Parsing failed
     }
 
@@ -259,8 +259,8 @@ export class RelocationSection extends Section {
         else super.data = value;
     }
     override get data(): ReadonlyDataWrapper {
-        if (!this.parsed) return new ReadonlyDataWrapper(super.data!);
-        else return new ReadonlyDataWrapper(this.relocations.buffer);
+        if (!this.parsed) return ReadonlyDataWrapper.wrap(super.data!);
+        else return ReadonlyDataWrapper.wrap(this.relocations.buffer);
     }
     override get hasData(): true {
         return true;
@@ -286,7 +286,7 @@ export class RPLCrcSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        return new ReadonlyDataWrapper(new Uint32Array(this.crcs.map(x => +x))).swap32();
+        return ReadonlyDataWrapper.wrap(new Uint32Array(this.crcs.map(x => +x))).swap32();
     }
     override get hasData(): true {
         return true;
@@ -322,7 +322,7 @@ export class RPLFileInfoSection extends Section {
 
         this.fileinfo = new Structs.RPLFileInfo();
 
-        const data = new DataWrapper(super.data!);
+        const data = DataWrapper.wrap(super.data!);
         const magic = data.passUint16();
         if (+magic !== +this.fileinfo.magic) throw new Error(`RPL File Info section magic number is invalid. Expected 0xCAFE, got 0x${magic.toString(16).toUpperCase()}`);
 
@@ -364,7 +364,7 @@ export class RPLFileInfoSection extends Section {
     }
 
     override get data(): ReadonlyDataWrapper {
-        const buffer = new DataWrapper(Buffer.allocUnsafe(0x60));
+        const buffer = DataWrapper.wrap(Buffer.allocUnsafe(0x60));
         const hasStrings = this.strings.size > 0;
         
         // Fix stringsOffset according to the strings data we actually have or not.
@@ -400,14 +400,14 @@ export class RPLFileInfoSection extends Section {
         buffer.dropUint16(this.fileinfo.tlsAlignShift);
         buffer.dropUint32(this.fileinfo.runtimeFileInfoSize);
         
-        if (!hasStrings) return new ReadonlyDataWrapper(buffer);
+        if (!hasStrings) return ReadonlyDataWrapper.wrap(buffer);
 
         const paddingBytesBeforeStringsBegin = <number>this.fileinfo.stringsOffset - 0x60;
         if (paddingBytesBeforeStringsBegin < 0) throw new Error(
             `RPLFileInfoSection serialization error: Strings are attached, but their requested offset (0x${this.fileinfo.stringsOffset.toString(16)}) is invalid.`
         );
 
-        return new ReadonlyDataWrapper(Buffer.concat([
+        return ReadonlyDataWrapper.wrap(Buffer.concat([
             buffer, new Uint8Array(paddingBytesBeforeStringsBegin), this.strings.buffer
         ]));
     }

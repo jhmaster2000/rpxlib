@@ -1,9 +1,19 @@
 import { uint8, uint16, uint32, sint8, sint16, sint32, type TypedArray } from './primitives.js';
 
-export class DataWrapper extends Uint8Array {
-    constructor(arg: TypedArray) {
-        super(arg.buffer as ArrayBuffer, arg.byteOffset, arg.byteLength);
+export class DataWrapper<TArrayBuffer extends ArrayBufferLike = ArrayBufferLike> extends Uint8Array<TArrayBuffer> {
+    protected constructor(buffer: TArrayBuffer, byteOffset?: number, length?: number);
+    protected constructor(elements: Iterable<number> | ArrayLike<number> | ArrayBuffer);
+    protected constructor(length?: number);
+    protected constructor(...args: unknown[]) {
+        // @ts-expect-error constructor spread
+        super(...args);
     }
+
+    /** Zero-copy initializer. */
+    static wrap(data: TypedArray) {
+        return new this(data.buffer, data.byteOffset, data.byteLength);
+    }
+
     pos: number = 0;
 
     passUint8(): uint8 {
@@ -78,13 +88,13 @@ export class DataWrapper extends Uint8Array {
         this.pos += byteCount;
     }
 
-    swap16(): DataWrapper {
+    swap16(): DataWrapper<TArrayBuffer> {
         const len = this.length;
         if (len % 2 !== 0) throw new RangeError('Buffer size must be a multiple of 16-bits');
         for (let i = 0, x; i < len; i += 2) { x = this[i]!; this[i] = this[i + 1]!; this[i + 1] = x; }
         return this;
     }
-    swap32(): DataWrapper {
+    swap32(): DataWrapper<TArrayBuffer> {
         const len = this.length;
         if (len % 4 !== 0) throw new RangeError('Buffer size must be a multiple of 32-bits');
         for (let i = 0, x; i < len; i += 4) {
@@ -93,13 +103,14 @@ export class DataWrapper extends Uint8Array {
         }
         return this;
     }
-
-    // These two overrides are temporary workarounds for a bug in JSC engine
-    //override subarray(start?: number, end?: number) { return new DataWrapper(new Uint8Array(this).subarray(start, end)); }
-    //override slice(start?: number, end?: number) { return new DataWrapper(new Uint8Array(this).slice(start, end)); }
 }
 
 export class ReadonlyDataWrapper extends DataWrapper {
+    /** Zero-copy initializer. */
+    static override wrap(data: TypedArray) {
+        return new this(data.buffer, data.byteOffset, data.byteLength);
+    }
+
     /** @internal For internal API interoperability */
     static '@@unlock'(buffer: ReadonlyDataWrapper) {
         return Object.defineProperty(buffer, 'buffer', {
@@ -118,7 +129,7 @@ export class ReadonlyDataWrapper extends DataWrapper {
 
     readonly [k: number]: number;
     /** @internal For internal APIs */
-    protected get '@@arraybuffer'(): ArrayBuffer { return super.buffer; }
+    protected get '@@arraybuffer'(): ArrayBufferLike { return super.buffer; }
     override get buffer(): never { throw new Error('Cannot access writable ArrayBuffer of ReadonlyDataWrapper instance.'); }
     override toReversed(): ReadonlyDataWrapper { return new ReadonlyDataWrapper(new Uint8Array(this).reverse()); }
     override reverse(): Discarded { throw new Error('Illegal call to ReadonlyDataWrapper.reverse'); }

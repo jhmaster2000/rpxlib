@@ -37,7 +37,7 @@ export class RelocationStore {
         this.entSize = this.rela ? 12 : 8;
 
         if (!data) {
-            this.#data = new DataWrapper(new Uint8Array(0));
+            this.#data = DataWrapper.wrap(new Uint8Array(0));
             this.#nextFreeIndex = 0;
             return this;
         }
@@ -82,7 +82,7 @@ export class RelocationStore {
 
     /** All of the RelocationStore's relocations as a buffer. */
     get buffer(): Uint8Array {
-        const dw = new DataWrapper(Buffer.allocUnsafe(this.size));
+        const dw = DataWrapper.wrap(Buffer.allocUnsafe(this.size));
         const { entSize } = this;
         const originalCount = this.#data.byteLength / entSize;
 

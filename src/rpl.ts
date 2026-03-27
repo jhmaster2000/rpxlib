@@ -34,7 +34,7 @@ export namespace RPL {
 
 export class RPL extends Header {
     constructor(data: Uint8Array, opts: RPL.ParseOptions = {}) {
-        const file = new DataWrapper(data);
+        const file = DataWrapper.wrap(data);
         super(file);
 
         opts.parseRelocs ??= false;
@@ -133,7 +133,7 @@ export class RPL extends Header {
         options.compressAsPossible ??= false;
         options.automaticFileExtension ??= true;
 
-        const headers = new DataWrapper(Buffer.allocUnsafe(
+        const headers = DataWrapper.wrap(Buffer.allocUnsafe(
             <number>this.headerSize
             //+ (this.#programs.length * <number>this.programHeadersEntrySize)
             + (this.#sections.length * <number>this.sectionHeadersEntrySize)
