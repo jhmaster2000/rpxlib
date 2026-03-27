@@ -30,6 +30,7 @@ export default tseslint.config(
             },
         },
         rules: {
+            'eqeqeq': 'error',
             'prefer-const': 'error',
             'array-callback-return': ['error', { allowImplicit: true }],
             indent: ['error', 4, { SwitchCase: 1 }],
