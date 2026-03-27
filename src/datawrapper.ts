@@ -95,8 +95,8 @@ export class DataWrapper extends Uint8Array {
     }
 
     // These two overrides are temporary workarounds for a bug in JSC engine
-    override subarray(start?: number, end?: number) { return new DataWrapper(new Uint8Array(this).subarray(start, end)); }
-    override slice(start?: number, end?: number) { return new DataWrapper(new Uint8Array(this).slice(start, end)); }
+    //override subarray(start?: number, end?: number) { return new DataWrapper(new Uint8Array(this).subarray(start, end)); }
+    //override slice(start?: number, end?: number) { return new DataWrapper(new Uint8Array(this).slice(start, end)); }
 }
 
 export class ReadonlyDataWrapper extends DataWrapper {
