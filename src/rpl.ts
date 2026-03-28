@@ -184,9 +184,11 @@ export class RPL extends Header {
             if (uncompressedData === true) {
                 crcsOffset = offset;
                 crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
-                datasink.write(Buffer.allocUnsafe(this.#sections.length * 4 /* Section.entSize */));
+                // CRCs data write is deferred to the end, but the space must be pre-allocated at the required offset here.
+                currOffset += datasink.write(Buffer.allocUnsafe(this.#sections.length * 4 /* crcSection.entSize */));
             } else {
-                datasink.write(compressedData ?? uncompressedData);
+                currOffset += datasink.write(compressedData ?? uncompressedData);
+                // calculate section CRC hash
                 if (+this.type === Type.RPL) {
                     const crc: number = zlib.crc32(uncompressedData);
                     crcs[ix  ] = crc >> 24 & 0xFF;
@@ -211,7 +213,6 @@ export class RPL extends Header {
                 (<number>section.flags) &= ~SectionFlags.Compressed;
                 sectionSize = section.size;
                 if (section.hasData) {
-                    currOffset += <number>sectionSize;
                     writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
                 } else { const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00; }
             }
@@ -228,7 +229,6 @@ export class RPL extends Header {
                     } else if (isCRCSection || +section.type === SectionType.RPLFileInfo) {
                         (<number>section.flags) &= ~SectionFlags.Compressed;
                         sectionSize = section.size;
-                        currOffset += <number>sectionSize;
                         writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
                         if (!options.compressAsPossible) console.warn(
                             `[rpxlib] WARN: Saving RPL CRCs or File Info section which has been marked as compressed, this is likely a mistake.\n` +
@@ -248,7 +248,6 @@ export class RPL extends Header {
                         if (compression !== 0 && compressed.byteLength >= uncompressed.byteLength) {
                             (<number>section.flags) &= ~SectionFlags.Compressed;
                             sectionSize = uncompressed.byteLength;
-                            currOffset += <number>sectionSize;
                             writeSectionDataAndCRC(i, sectionOffset, uncompressed);
                             if (!options.compressAsPossible) console.warn(
                                 `[rpxlib] WARN: Saving section #${i} which has been marked as compressed as uncompressed,\n` +
@@ -256,7 +255,6 @@ export class RPL extends Header {
                             );
                         } else {
                             sectionSize = compressed.byteLength;
-                            currOffset += <number>sectionSize;
                             (<number>section.flags) |= SectionFlags.Compressed;
                             writeSectionDataAndCRC(i, sectionOffset, uncompressed, compressed); // Proper compressed section saving
                         }
@@ -264,7 +262,6 @@ export class RPL extends Header {
                 } else { // Saving uncompressed section
                     sectionSize = section.size;
                     if (section.hasData) {
-                        currOffset += <number>sectionSize;
                         writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
                     } else { const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00; }
                 }
