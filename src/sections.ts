@@ -77,6 +77,7 @@ export class Section extends Structs.Section {
     override readonly type: SectionType;
     /**
      * **NOTE:** This will not be the actual offset this section will be saved to by `RPL.save()`.
+     * An appropriate offset will be dynamically calculated on save by the library internally.
      * 
      * This field is only provided for inspection of the existing, unmodified input file's data. */
     override readonly storedOffset: uint32;

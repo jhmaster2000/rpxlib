@@ -263,6 +263,14 @@ interface SpecialSectionsOptions {
     rplfileinfo?: boolean;
 }
 interface DebugOptions {
+    /**
+     * If `false` or unset, logs the parsed in-memory file data, reflecting any changes made to it by RPXLib.
+     * 
+     * If `true`, logs the original input data used for certain fields which RPXLib dynamically re-calculates on load,
+     * even if you haven't made any changes to the loaded file yourself.
+     * 
+     * This is recommended for `objdump`-style inspection of ELF/RPL files. */
+    useOriginalData?: boolean;
     logHeader?: boolean;
     logProgramHeaders?: boolean;
     logSectionHeaders?: boolean;
@@ -277,6 +285,7 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
     if (options.logPerformance) logperf = (msg: string, startPerf: number) => console.log(msg, performance.now() - startPerf, 'ms');
     else logperf = () => void 0;
 
+    options.useOriginalData ??= false;
     options.logHeader ??= true;
     options.logProgramHeaders ??= true;
     options.logSectionHeaders ??= true;
@@ -371,11 +380,19 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
             str += hex32(section.addr) + '  ';
             logperf('Got section.addr in', perfx);
             perfx = performance.now();
-            str += hex32(section.storedOffset) + '  ';
-            logperf('Got section.storedOffset in', perfx);
-            perfx = performance.now();
-            str += hex32(Reflect.get(section, 'storedSize') as Section['storedSize']) + '  ';
-            logperf('Got section.storedSize in', perfx);
+            if (options.useOriginalData) {
+                str += hex32(section.storedOffset) + '  ';
+                logperf('Got section.storedOffset in', perfx);
+                perfx = performance.now();
+                str += hex32(Reflect.get(section, 'storedSize') as Section['storedSize']) + '  ';
+                logperf('Got section.storedSize in', perfx);
+            } else {
+                str += '<unknown> ' + '  ';
+                logperf('Got section.offset* in', perfx);
+                perfx = performance.now();
+                str += hex32(section.size) + '  ';
+                logperf('Got section.size in', perfx);
+            }
             perfx = performance.now();
             str += hex32(section.entSize) + '  ';
             logperf('Got section.entSize in', perfx);
