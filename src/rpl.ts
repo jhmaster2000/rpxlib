@@ -9,6 +9,7 @@ import { DataWrapper, ReadonlyDataWrapper } from './datawrapper.js';
 import { NoBitsSection, RelocationSection, RPLCrcSection, RPLFileInfoSection, Section, StringSection, SymbolSection } from './sections.js';
 import { Program } from './programs.js';
 import { type ELFSymbol } from './symbol.js';
+import { sortSectionsForWiiU } from './wiiu-section-offsets.js';
 
 export namespace RPL {
     export interface ParseOptions {
@@ -133,11 +134,11 @@ export class RPL extends Header {
         options.compressAsPossible ??= false;
         options.automaticFileExtension ??= true;
 
-        const headers = DataWrapper.wrap(Buffer.allocUnsafe(
-            <number>this.headerSize
-            //+ (this.#programs.length * <number>this.programHeadersEntrySize)
-            + (this.#sections.length * <number>this.sectionHeadersEntrySize)
-        ));
+        //const PROGRAM_HEADERS_SIZE = <number>this.programHeadersEntrySize * this.#programs.length;
+        const SECTION_HEADERS_SIZE = <number>this.sectionHeadersEntrySize * this.#sections.length;
+        const HEADERS_SIZE = <number>this.headerSize /*+ PROGRAM_HEADERS_SIZE*/ + SECTION_HEADERS_SIZE;
+
+        const headers = DataWrapper.wrap(Buffer.allocUnsafe(HEADERS_SIZE));
         headers.dropUint32(this.magic);
         headers.dropUint8(this.class);
         headers.dropUint8(this.endian);
@@ -160,6 +161,11 @@ export class RPL extends Header {
         headers.dropUint16(this.shstrIndex);
         //headers.zerofill(); //? padding
 
+        if (headers.pos !== +this.headerSize) throw new Error(`Header size assertion failed: ${headers.pos} != ${+this.headerSize}`);
+
+        //const programHeadersStartOffset = headers.pos;
+        const sectionHeadersStartOffset = headers.pos;
+
         if (+this.type === Type.RPL) {
             const fileinfoSection = this.#sections.find(s => s instanceof RPLFileInfoSection);
             if (!fileinfoSection) throw new Error('Cannot save RPL, no RPL File Info section found.');
@@ -169,9 +175,7 @@ export class RPL extends Header {
 
         let crcsOffset = 0;
         const crcs: number[] = [];
-        let currOffset = <number>this.headerSize
-            //+ <number>this.programHeadersEntrySize * this.#programs.length
-            + <number>this.sectionHeadersEntrySize * this.#sections.length;
+        let currOffset = HEADERS_SIZE;
         const datasink = new DataSink();
 
         /** If uncompressedData is `true`, the section is considered the RPLCrcSection */
@@ -193,8 +197,12 @@ export class RPL extends Header {
             }
         };
 
-        for (let i = 0; i < this.#sections.length; i++) {
-            const section = this.#sections[i]!;
+        // NOTE: This only re-orders the sections data offsets in the file layout.
+        // The sections headers are still written in their original order from the `RPL.#sections` array.
+        const wiiuSortedSections = sortSectionsForWiiU(this);
+
+        for (let i = 0; i < wiiuSortedSections.length; i++) {
+            const section = wiiuSortedSections[i]!;
             const sectionOffset: number = section.hasData ? currOffset : 0;
             let sectionSize: number | uint32;
 
@@ -262,6 +270,7 @@ export class RPL extends Header {
                 }
             }
 
+            headers.pos = sectionHeadersStartOffset + section.index * <number>this.sectionHeadersEntrySize;
             headers.dropUint32(section.nameOffset);
             headers.dropUint32(section.type);
             headers.dropUint32(section.flags);
