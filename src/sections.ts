@@ -75,7 +75,11 @@ export class Section extends Structs.Section {
     }
 
     override readonly type: SectionType;
-    protected override readonly storedOffset: uint32;
+    /**
+     * **NOTE:** This will not be the actual offset this section will be saved to by `RPL.save()`.
+     * 
+     * This field is only provided for inspection of the existing, unmodified input file's data. */
+    override readonly storedOffset: uint32;
     protected override readonly storedSize: uint32;
 
     get index(): number {
@@ -90,21 +94,6 @@ export class Section extends Structs.Section {
         const shstrtab = this.rpx.sections[+this.rpx.shstrIndex];
         if (!(shstrtab instanceof StringSection)) throw new Error('Invalid ELF file. Section header string table index is not a string table.');
         else return shstrtab.strings.get(this.nameOffset);
-    }
-
-    get offset(): uint32 {
-        if (!this.hasData) return new uint32(0);
-        const sections = this.rpx.sections.filter(section => section.hasData);
-        const idx = sections.indexOf(this);
-        if (idx === 0) {
-            const off = <number>this.rpx.headerSize
-                //+ <number>this.rpx.programHeadersEntrySize * this.rpx.programs.length
-                + <number>this.rpx.sectionHeadersEntrySize * this.rpx.sections.length;
-            return new uint32(off);
-        }
-        const prevSect = sections[idx - 1]!;
-        const off = <number>prevSect.offset + <number>prevSect.size;
-        return new uint32(off);
     }
 
     get size(): uint32 {

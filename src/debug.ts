@@ -371,8 +371,8 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
             str += hex32(section.addr) + '  ';
             logperf('Got section.addr in', perfx);
             perfx = performance.now();
-            str += hex32(section.offset) + '  ';
-            logperf('Got section.offset in', perfx);
+            str += hex32(section.storedOffset) + '  ';
+            logperf('Got section.storedOffset in', perfx);
             perfx = performance.now();
             str += hex32(section.size) + '  ';
             logperf('Got section.size in', perfx);
