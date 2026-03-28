@@ -467,7 +467,7 @@ export class RPL extends Header {
             this.#sections.splice(this.#sections.indexOf(section), 1);
             this.shstrIndex = <number>this._shstrIndex - 1;
         } else {
-            this.#sections[section.index] = new Section(new DataWrapper(new Uint8Array(0x28)), this);
+            this.#sections[section.index] = new Section(DataWrapper.wrap(new Uint8Array(0x28)), this);
         }
         Reflect.deleteProperty(section, 'rpx');
     }
