@@ -180,12 +180,12 @@ export class RPL extends Header {
 
         /** If uncompressedData is `true`, the section is considered the RPLCrcSection */
         const writeSectionDataAndCRC = (i: number, offset: number, uncompressedData: Uint8Array | true, compressedData?: Uint8Array): void => {
-            const ix = i * 4;
+            const crcPos = i * 4;
             let writtenBytes: number;
 
             if (uncompressedData === true) {
                 crcsOffset = offset;
-                crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
+                crcs[crcPos] = 0x00; crcs[crcPos+1] = 0x00; crcs[crcPos+2] = 0x00; crcs[crcPos+3] = 0x00;
                 // CRCs data write is deferred to the end, but the space must be pre-allocated at the required offset here.
                 writtenBytes = datasink.write(Buffer.allocUnsafe(this.#sections.length * 4 /* crcSection.entSize */));
             } else {
@@ -193,10 +193,10 @@ export class RPL extends Header {
                 // calculate section CRC hash
                 if (+this.type === Type.RPL) {
                     const crc: number = zlib.crc32(uncompressedData);
-                    crcs[ix  ] = crc >> 24 & 0xFF;
-                    crcs[ix+1] = crc >> 16 & 0xFF;
-                    crcs[ix+2] = crc >>  8 & 0xFF;
-                    crcs[ix+3] = crc       & 0xFF;
+                    crcs[crcPos  ] = crc >> 24 & 0xFF;
+                    crcs[crcPos+1] = crc >> 16 & 0xFF;
+                    crcs[crcPos+2] = crc >>  8 & 0xFF;
+                    crcs[crcPos+3] = crc       & 0xFF;
                 }
             }
             const nextOffset = currOffset + writtenBytes;
@@ -210,38 +210,49 @@ export class RPL extends Header {
         // The sections headers are still written in their original order from the `RPL.#sections` array.
         const wiiuSortedSections = sortSectionsForWiiU(this);
 
-        for (let i = 0; i < wiiuSortedSections.length; i++) {
-            const section = wiiuSortedSections[i]!;
+        for (let n = 0; n < wiiuSortedSections.length; n++) {
+            const section = wiiuSortedSections[n]!;
+            const sectionIndex = section.index; // by section header order (see NOTE above)
             const sectionOffset: number = section.hasData ? currOffset : 0;
             let sectionSize: number | uint32;
 
             const isCRCSection = +section.type === SectionType.RPLCrcs;
+
             if (compression === false) { // Saving file with no compression (ELF)
                 (<number>section.flags) &= ~SectionFlags.Compressed;
                 sectionSize = section.size;
                 if (section.hasData) {
-                    writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
-                } else { const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00; }
+                    writeSectionDataAndCRC(sectionIndex, sectionOffset, isCRCSection || section.data!);
+                } else {
+                    const crcPos = sectionIndex * 4;
+                    crcs[crcPos] = 0x00; crcs[crcPos+1] = 0x00; crcs[crcPos+2] = 0x00; crcs[crcPos+3] = 0x00;
+                }
             }
             else { // Saving file with compression (RPL/RPX)
-                if (<number>section.flags & SectionFlags.Compressed || options.compressAsPossible) { // Saving compressed section
+                if (<number>section.flags & SectionFlags.Compressed || options.compressAsPossible) { // Possibly compressed section
+                    // Section has no data, nothing to save
                     if (!section.hasData) {
                         (<number>section.flags) &= ~SectionFlags.Compressed;
                         sectionSize = section.size;
-                        const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
+                        const crcPos = sectionIndex * 4;
+                        crcs[crcPos] = 0x00; crcs[crcPos+1] = 0x00; crcs[crcPos+2] = 0x00; crcs[crcPos+3] = 0x00;
                         if (!options.compressAsPossible) console.warn(
-                            `[rpxlib] WARN: Saving section #${i} which has no data and has been marked as compressed.\n` +
+                            `[rpxlib] WARN: Saving section #${sectionIndex} which has no data and has been marked as compressed.\n` +
                             `         This is likely a mistake and the section has been unmarked as compressed.`
                         );
-                    } else if (isCRCSection || +section.type === SectionType.RPLFileInfo) {
+                    }
+                    // CRC and FileInfo should not be compressed, ignore compression settings
+                    else if (isCRCSection || +section.type === SectionType.RPLFileInfo) {
                         (<number>section.flags) &= ~SectionFlags.Compressed;
                         sectionSize = section.size;
-                        writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
+                        writeSectionDataAndCRC(sectionIndex, sectionOffset, isCRCSection || section.data!);
                         if (!options.compressAsPossible) console.warn(
                             `[rpxlib] WARN: Saving RPL CRCs or File Info section which has been marked as compressed, this is likely a mistake.\n` +
                             `         These sections cannot be compressed and have been saved as uncompressed instead.`
                         );
-                    } else {
+                    }
+                    // Saving compressed section
+                    else {
                         const data = section.data!;
                         const uncompressed = data instanceof ReadonlyDataWrapper
                             ? new Uint8Array(data['@@arraybuffer'], data.byteOffset, data.byteLength)
@@ -252,25 +263,29 @@ export class RPL extends Header {
                         ]);
                         compressed.writeUint32BE(uncompressed.byteLength, 0);
 
+                        // Check if compression is actually worth it (for small sections)
                         if (compression !== 0 && compressed.byteLength >= uncompressed.byteLength) {
                             (<number>section.flags) &= ~SectionFlags.Compressed;
                             sectionSize = uncompressed.byteLength;
-                            writeSectionDataAndCRC(i, sectionOffset, uncompressed);
+                            writeSectionDataAndCRC(sectionIndex, sectionOffset, uncompressed); // Fallback to uncompressed saving
                             if (!options.compressAsPossible) console.warn(
-                                `[rpxlib] WARN: Saving section #${i} which has been marked as compressed as uncompressed,\n` +
+                                `[rpxlib] WARN: Saving section #${sectionIndex} which has been marked as compressed as uncompressed,\n` +
                                 `         due to the compression making it larger than uncompressed.`
                             );
                         } else {
                             sectionSize = compressed.byteLength;
                             (<number>section.flags) |= SectionFlags.Compressed;
-                            writeSectionDataAndCRC(i, sectionOffset, uncompressed, compressed); // Proper compressed section saving
+                            writeSectionDataAndCRC(sectionIndex, sectionOffset, uncompressed, compressed); // Effective compressed section saving
                         }
                     }
                 } else { // Saving uncompressed section
                     sectionSize = section.size;
                     if (section.hasData) {
-                        writeSectionDataAndCRC(i, sectionOffset, isCRCSection || section.data!);
-                    } else { const ix = i*4; crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00; }
+                        writeSectionDataAndCRC(sectionIndex, sectionOffset, isCRCSection || section.data!);
+                    } else {
+                        const crcPos = sectionIndex * 4;
+                        crcs[crcPos] = 0x00; crcs[crcPos+1] = 0x00; crcs[crcPos+2] = 0x00; crcs[crcPos+3] = 0x00;
+                    }
                 }
             }
 
