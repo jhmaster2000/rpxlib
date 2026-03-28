@@ -181,13 +181,15 @@ export class RPL extends Header {
         /** If uncompressedData is `true`, the section is considered the RPLCrcSection */
         const writeSectionDataAndCRC = (i: number, offset: number, uncompressedData: Uint8Array | true, compressedData?: Uint8Array): void => {
             const ix = i * 4;
+            let writtenBytes: number;
+
             if (uncompressedData === true) {
                 crcsOffset = offset;
                 crcs[ix] = 0x00; crcs[ix+1] = 0x00; crcs[ix+2] = 0x00; crcs[ix+3] = 0x00;
                 // CRCs data write is deferred to the end, but the space must be pre-allocated at the required offset here.
-                currOffset += datasink.write(Buffer.allocUnsafe(this.#sections.length * 4 /* crcSection.entSize */));
+                writtenBytes = datasink.write(Buffer.allocUnsafe(this.#sections.length * 4 /* crcSection.entSize */));
             } else {
-                currOffset += datasink.write(compressedData ?? uncompressedData);
+                writtenBytes = datasink.write(compressedData ?? uncompressedData);
                 // calculate section CRC hash
                 if (+this.type === Type.RPL) {
                     const crc: number = zlib.crc32(uncompressedData);
@@ -197,6 +199,11 @@ export class RPL extends Header {
                     crcs[ix+3] = crc       & 0xFF;
                 }
             }
+            const nextOffset = currOffset + writtenBytes;
+            const alignedNextOffset = Util.roundUpPow2(nextOffset, 64);
+            const paddingBytes = alignedNextOffset - nextOffset;
+            if (paddingBytes > 0) datasink.write(Buffer.alloc(paddingBytes));
+            currOffset = alignedNextOffset;
         };
 
         // NOTE: This only re-orders the sections data offsets in the file layout.
