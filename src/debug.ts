@@ -374,8 +374,8 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
             str += hex32(section.storedOffset) + '  ';
             logperf('Got section.storedOffset in', perfx);
             perfx = performance.now();
-            str += hex32(section.size) + '  ';
-            logperf('Got section.size in', perfx);
+            str += hex32(Reflect.get(section, 'storedSize') as Section['storedSize']) + '  ';
+            logperf('Got section.storedSize in', perfx);
             perfx = performance.now();
             str += hex32(section.entSize) + '  ';
             logperf('Got section.entSize in', perfx);
