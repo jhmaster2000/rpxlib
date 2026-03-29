@@ -275,26 +275,18 @@ interface DebugOptions {
     logProgramHeaders?: boolean;
     logSectionHeaders?: boolean;
     logSpecialSections?: boolean | SpecialSectionsOptions;
-    logPerformance?: boolean;
     /** Filters the output of logSectionHeaders and logSpecialSections to only show sections that pass this filter (truthy return). */
     sectionFilter?(section: Section): boolean;
 }
 
 export function debug(rpx: RPL, options: DebugOptions = {}): void {
-    let logperf: (msg: string, startPerf: number) => void;
-    if (options.logPerformance) logperf = (msg: string, startPerf: number) => console.log(msg, performance.now() - startPerf, 'ms');
-    else logperf = () => void 0;
-
     options.useOriginalData ??= false;
     options.logHeader ??= true;
     options.logProgramHeaders ??= true;
     options.logSectionHeaders ??= true;
     const specialSections = options.logSpecialSections ?? false;
 
-    const debugPerf = performance.now();
-    let perf: number;
     if (options.logHeader) {
-        perf = performance.now();
         console.log('[ELF Header]');
         log('Magic                    ', '\x7FELF');
         log('Class                    ', rpx.class, stringifyClass, hex8);
@@ -315,107 +307,55 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
         log('Sect. H. Entry Size      ', rpx.sectionHeadersEntrySize, hex16);
         log('Sect. H. Entry Count     ', rpx.sectionHeadersEntryCount, hex16);
         log('Sect. H. StrTab Sect. Idx', rpx.shstrIndex, hex16, String);
-        logperf('Got ELF header in', perf);
     }
 
     if (options.logProgramHeaders) {
-        let perfx: number;
-        const perfList = performance.now();
         console.log('\n[Segments]', rpx.programs.length);
         console.log('    ##  Type                            Offset      Virt.Addr.  Phys.Addr.  File Size   Mem. Size   Flags             Align');
         for (let i = 0; i < rpx.programs.length; i++) {
-            perf = performance.now();
             const program = rpx.programs[i]!;
             let str = '    ' + i.toString().padEnd(2) + '  ';
-            perfx = performance.now();
             str += (stringifyProgramType(program.type) + ' (' + hex32(program.type) + ')').padEnd(32);
-            logperf('Got program.type in', perfx);
-            perfx = performance.now();
             str += hex32(program.storedOffset) + '  ';
-            logperf('Got program.offset in', perfx);
-            perfx = performance.now();
             str += hex32(program.virtualAddr) + '  ';
-            logperf('Got program.virtualAddr in', perfx);
-            perfx = performance.now();
             str += hex32(program.physicalAddr) + '  ';
-            logperf('Got program.physicalAddr in', perfx);
-            perfx = performance.now();
             str += hex32(program.programFileSize) + '  ';
-            logperf('Got program.fileSize in', perfx);
-            perfx = performance.now();
             str += hex32(program.programMemorySize) + '  ';
-            logperf('Got program.memorySize in', perfx);
-            perfx = performance.now();
             str += stringifyProgramFlags(program.flags as ProgramFlags) + ' (' + hex32(program.flags) + ')  ';
-            logperf('Got program.flags in', perfx);
-            perfx = performance.now();
             str += hex32(program.align) + '  ';
-            logperf('Got program.align in', perfx);
             console.log(str);
-            logperf('Got whole program in', perf);
         }
-        logperf('Got entire program list in', perfList);
     }
 
     if (options.logSectionHeaders) {
-        let perfx: number;
-        const perfList = performance.now();
         console.log('\n[Sections]', rpx.sections.length);
         console.log('    ##  Name                      Type                            Virt.Addr.  Offset      Size        Ent. Size   Link  Info        Align       Flags');
         for (let i = 0; i < rpx.sections.length; i++) {
-            perf = performance.now();
             const section = rpx.sections[i]!;
-            
             if (options.sectionFilter && !options.sectionFilter(section)) continue;
             
             let str = '    ';
             str += i.toString().padEnd(2) + '  ';
-            perfx = performance.now();
             str += section.name.padEnd(24) + '  ';
-            logperf('\nGot section.name in', perfx);
-            perfx = performance.now();
             str += (stringifySectionType(section.type) + ' (' + hex32(section.type) + ')').padEnd(32);
-            logperf('Got section.type in', perfx);
-            perfx = performance.now();
             str += hex32(section.addr) + '  ';
-            logperf('Got section.addr in', perfx);
-            perfx = performance.now();
             if (options.useOriginalData) {
                 str += hex32(section.storedOffset) + '  ';
-                logperf('Got section.storedOffset in', perfx);
-                perfx = performance.now();
                 str += hex32(Reflect.get(section, 'storedSize') as Section['storedSize']) + '  ';
-                logperf('Got section.storedSize in', perfx);
             } else {
                 str += '<unknown> ' + '  ';
-                logperf('Got section.offset* in', perfx);
-                perfx = performance.now();
                 str += hex32(section.size) + '  ';
-                logperf('Got section.size in', perfx);
             }
-            perfx = performance.now();
             str += hex32(section.entSize) + '  ';
-            logperf('Got section.entSize in', perfx);
-            perfx = performance.now();
             str += (+section.link ? section.link.toString() : '').padStart(4) + '  ';
-            logperf('Got section.link in', perfx);
-            perfx = performance.now();
             str += (+section.info ? hex32(section.info) : '').padStart(10) + '  ';
-            logperf('Got section.info in', perfx);
-            perfx = performance.now();
             str += hex32(section.addrAlign) + '  ';
-            logperf('Got section.addrAlign in', perfx);
-            perfx = performance.now();
             str += stringifySectionFlags(section.flags as SectionFlags) + ' (' + hex32(section.flags) + ')';
-            logperf('Got section.flags in', perfx);
             console.log(str);
-            logperf('Got whole section in', perf);
         }
-        logperf('Got entire section list in', perfList);
     }
 
     if (specialSections) {
-        const perfList = performance.now();
         console.log('\n[Special Sections]');
         for (let i = 0; i < rpx.sections.length; i++) {
             if (options.sectionFilter && !options.sectionFilter(rpx.sections[i]!)) continue;
@@ -425,11 +365,9 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
                     if (typeof specialSections !== 'boolean' && !specialSections.strings) break;
                     const section = rpx.sections[i] as StringSection;
                     console.log(`    Section #${i} - String Table:`);
-                    perf = performance.now();
                     for (const [addr, str] of Object.entries(section.strings)) {
                         console.log(`        ${hex32(+addr)} = ${str as string}`);
                     }
-                    logperf('Traversed StringSection.strings in', perf);
                     break;
                 }
                 case SectionType.SymTab: {
@@ -437,7 +375,6 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
                     const section = rpx.sections[i] as SymbolSection;
                     console.log(`    Section #${i} - Symbol Table:`);
                     console.log('        Value       Size        Type                    Binding  Visibility  Info Othr  Shndx  Name');
-                    perf = performance.now();
                     for (const sym of section.symbols) {
                         let symstr = '        ';
                         symstr += hex32(sym.value) + '  ' + hex32(sym.size) + '  ';
@@ -448,7 +385,6 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
                         symstr += sym.shndx.toString().padStart(5) + '  ' + sym.name;
                         console.log(symstr);
                     }
-                    logperf('Traversed SymbolSection.symbols in', perf);
                     break;
                 }
                 case SectionType.Rel: //! fallthrough
@@ -457,7 +393,6 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
                     const section = rpx.sections[i] as RelocationSection;
                     console.log(`    Section #${i} - Relocations${+section.type === SectionType.Rela ? ' with addends' : ''}:`);
                     console.log('        Addr.       Addend      Info        Type  Sym.Index');
-                    perf = performance.now();
                     for (const rel of section.relocations) {
                         let relstr = '        ';
                         relstr += hex32(rel.addr) + '  ' + (+section.type === SectionType.Rela ? hexSInt(32, rel.addend!) : '   N / A  ') + '  ';
@@ -465,16 +400,13 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
                         console.log(relstr);
                     }
                     process.stdout.write('\n');
-                    logperf('Traversed RelocationSection.relocations in', perf);
                     break;
                 }
                 case SectionType.RPLCrcs: {
                     if (typeof specialSections !== 'boolean' && !specialSections.rplcrcs) break;
                     const section = rpx.sections[i] as RPLCrcSection;
                     console.log(`    Section #${i} - RPL CRCs:`);
-                    perf = performance.now();
                     const crcs = section.crcs;
-                    logperf('Computed RPLCrcSection.crcs in', perf);
                     process.stdout.write('        ');
                     for (let i = 0; i < crcs.length; i++) {
                         process.stdout.write(crcs[i]!.toString(16).toUpperCase().padStart(8, '0') + '    ');
@@ -486,7 +418,6 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
                 case SectionType.RPLFileInfo: {
                     if (typeof specialSections !== 'boolean' && !specialSections.rplfileinfo) break;
                     const section = rpx.sections[i] as RPLFileInfoSection;
-                    perf = performance.now();
                     console.log(`    Section #${i} - RPL File Info:`);
                     console.log('        Magic:', hex16(section.fileinfo.magic));
                     console.log('        Version:', hex16(section.fileinfo.version));
@@ -515,13 +446,10 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
                     console.log('        tlsAlignShift:', hex16(section.fileinfo.tlsAlignShift));
                     console.log('        runtimeFileInfoSize:', hex32(section.fileinfo.runtimeFileInfoSize));
                     console.log('        Strings:', section.strings);
-                    logperf('Traversed RPLFileInfoSection.fileinfo in', perf);
                     break;
                 }
                 default: continue;
             }
         }
-        logperf('Got all special sections in', perfList);
     }
-    logperf('\nFinished debugging in', debugPerf);
 }
