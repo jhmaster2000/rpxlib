@@ -1,5 +1,5 @@
 # RPXLib
-A general purpose RPL/RPX library.
+A general purpose Wii U RPL/RPX library.
 
 [![GitHub version][github-image]][github-url]
 [![downloads][downloads-image]][npm-url]
@@ -9,19 +9,20 @@ A general purpose RPL/RPX library.
 [![node-current][node-image]][node-url]
 [![license][license-image]][license-url]
 
-* Single dependency
-* Reading and writing support
+* Zero dependencies
+* Reading & writing support
 * Balanced between speed and data integrity
 
 ## Usage
 ```ts
-import * as rpxlib from 'rpxlib';
-import fs from 'fs';
+import { RPL } from 'rpxlib';
+import fs from 'node:fs';
 
 const rpxFileData = fs.readFileSync('./path/to/file.rpx');
-const rpx = new rpxlib.RPL(rpxFileData);
+const rpx = new RPL(rpxFileData);
 
-// Modify rpx as desired
+// Modify RPL/RPX as desired
+rpx.entryPoint = 0x0200CAFE;
 
 // Do not include the extension!
 rpx.save('./path/to/save/file', true);
