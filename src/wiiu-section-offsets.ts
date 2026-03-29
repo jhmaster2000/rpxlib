@@ -4,7 +4,7 @@ import { type RPL } from './rpl.js';
 
 /**
  * The Wii U RPL loader requires the data (not headers) of all sections to be arranged in a specific order in the file.
- * 
+ *
  * This is not required by Cemu, but real Wii U consoles will reject loading RPLs with incorrectly ordered section data.
  *
  * ? Required section data file offset order:
@@ -14,7 +14,7 @@ import { type RPL } from './rpl.js';
  * 4. LOAD (0xC0000000) sections <flags = -Write && +Alloc && -Exec> || <type = RPLExports || RPLImports>
  * 5. CODE (0x02000000) sections <flags =                     +Exec> [a.k.a TEXT]
  * 6. TEMP (no v. addr) sections <flags =           -Alloc && -Exec>
- * 
+ *
  * The placement of "NO DATA" sections (such as NoBits/.bss or Null)
  * is irrelevant as they will just be skipped during serialization anyway.
  */
@@ -27,7 +27,7 @@ export function sortSectionsForWiiU(file: RPL) {
     const CODE_sections: Section[] = [];
     const TEMP_sections: Section[] = [];
 
-    //* RPLCrcs & RPLFileInfo *//
+    //* RPLCrcs & RPLFileInfo
     const { crcSection, fileinfoSection } = file;
     sortedSections.push(crcSection!, fileinfoSection!);
 
@@ -47,7 +47,7 @@ export function sortSectionsForWiiU(file: RPL) {
 
         //* LOAD sections
         if (
-            // These types need special-casing because .fimport_*/.fexports have the Exec flag but still belong in the LOAD group. 
+            // These types need special-casing because .fimport_*/.fexports have the Exec flag but still belong in the LOAD group.
             +section.type === SectionType.RPLExports || +section.type === SectionType.RPLImports ||
             ((+section.flags & SectionFlags.Alloc) && !(+section.flags & SectionFlags_WriteExec)) // String/Symbol Table sections
         ) {

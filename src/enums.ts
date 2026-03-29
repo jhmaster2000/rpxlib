@@ -523,12 +523,12 @@ export enum RelocationType {
 }
 
 /** The type of a relocation field.
- * 
+ *
  * This is used to determine the size of data altered at the target address.
  */
 export enum RelocationFieldType {
     none = 0, //! size: 0
-    /** This specifies a 32-bit field occupying 4 bytes, 
+    /** This specifies a 32-bit field occupying 4 bytes,
     the alignment of which is 4 bytes unless otherwise specified. */
     word32 = 1, //! size: 4
     /** This specifies a 30-bit field contained within bits 0-29 of a word with

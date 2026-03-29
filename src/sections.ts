@@ -78,7 +78,7 @@ export class Section extends Structs.Section {
     /**
      * **NOTE:** This will not be the actual offset this section will be saved to by `RPL.save()`.
      * An appropriate offset will be dynamically calculated on save by the library internally.
-     * 
+     *
      * This field is only provided for inspection of the existing, unmodified input file's data. */
     override readonly storedOffset: uint32;
     protected override readonly storedSize: uint32;
@@ -356,13 +356,13 @@ export class RPLFileInfoSection extends Section {
     override get data(): ReadonlyDataWrapper {
         const buffer = DataWrapper.wrap(Buffer.allocUnsafe(0x60));
         const hasStrings = this.strings.size > 0;
-        
+
         // Fix stringsOffset according to the strings data we actually have or not.
         // If strings were removed, we will discard any offset and replace it with 0.
         // If strings were added, we will fixup the offset from 0 to 0x60, but not any other value.
         // This means if strings are present and the offset was manually set to a value >0 but <0x60 an error will still be thrown.
         this.fileinfo.stringsOffset = hasStrings ? (+this.fileinfo.stringsOffset || 0x60) : 0;
-        
+
         buffer.dropUint16(this.fileinfo.magic);
         buffer.dropUint16(this.fileinfo.version);
         buffer.dropUint32(this.fileinfo.textSize);
@@ -389,7 +389,7 @@ export class RPLFileInfoSection extends Section {
         buffer.dropUint16(this.fileinfo.tlsModuleIndex);
         buffer.dropUint16(this.fileinfo.tlsAlignShift);
         buffer.dropUint32(this.fileinfo.runtimeFileInfoSize);
-        
+
         if (!hasStrings) return ReadonlyDataWrapper.wrap(buffer);
 
         const paddingBytesBeforeStringsBegin = <number>this.fileinfo.stringsOffset - 0x60;

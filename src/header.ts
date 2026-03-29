@@ -40,18 +40,18 @@ export class Header extends Structs.Header {
     //override readonly isaVersion;
     //override readonly isaFlags;
     //override readonly entryPoint;
-    
+
     /**
      * **NOTE:** This will not be the actual offset the program headers will be saved to by `RPL.save()`.
      * An appropriate offset will be dynamically calculated on save by the library internally.
-     * 
+     *
      * This field is only provided for inspection of the existing, unmodified input file's data. */
     override readonly programHeadersOffset;
     override readonly programHeadersEntrySize;
     /**
      * **NOTE:** This will not be the actual offset the section headers will be saved to by `RPL.save()`.
      * An appropriate offset will be dynamically calculated on save by the library internally.
-     * 
+     *
      * This field is only provided for inspection of the existing, unmodified input file's data. */
     override readonly sectionHeadersOffset;
     override readonly sectionHeadersEntrySize;

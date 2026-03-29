@@ -49,7 +49,7 @@ export class Program extends Structs.Program {
 
     /** @internal The RPL/RPX file this Program belongs to. */
     protected readonly rpx: RPL;
-    
+
     // TODO
     //? Not sure if segment data should be allowed to go between null and non-null, but PT_LOAD segments can happen as both.
     //#data: Uint8Array | null = null;

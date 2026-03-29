@@ -13,7 +13,7 @@ namespace Util {
 
     /**
      * Fast align `n` to nearest multiple of a power of 2.
-     * 
+     *
      * Doesn't work with non-powers-of-2, input is not validated, output will simply be wrong. */
     export function roundUpPow2(n: number, powerOf2: number): number {
         if (powerOf2 <= 1) return n;

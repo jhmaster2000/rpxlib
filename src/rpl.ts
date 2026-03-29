@@ -71,14 +71,14 @@ export class RPL extends Header {
                 default:                      this.#sections[i] = new Section(file, this);
             }
         }
-        
+
         Reflect.deleteProperty(this, '_programHeadersEntryCount'); //! [[DISCARD this._programHeadersEntryCount]]
         Reflect.deleteProperty(this, '_sectionHeadersEntryCount'); //! [[DISCARD this._sectionHeadersEntryCount]]
     }
 
     /**
      * Create a blank ELF file from scratch. The file is created in a header-only state.
-     * 
+     *
      * Creation of boilerplate sections such as .shstrtab or special RPL sections must be done manually.
      * Failure to do so properly will result in an invalid file that cannot be saved.
      */
@@ -112,7 +112,7 @@ export class RPL extends Header {
      * Saves the RPL/RPX to a file.
      * @param filepath The path to the output file without an extension.
      * The extension will be automatically determined based on the ELF type.
-     * 
+     *
      * Automatic extension assignment can be disabled with the `automaticFileExtension: false` option.
      * @param compression The compression level to use on sections with the `Compressed` flag enabled.
      * - `false` disables compression (default).
@@ -210,7 +210,7 @@ export class RPL extends Header {
         // The sections headers are still written in their original order from the `RPL.#sections` array.
         let dataWriteOrderedSections: Section[] = this.#sections;
 
-        if (+this.type === Type.RPL) { 
+        if (+this.type === Type.RPL) {
             dataWriteOrderedSections = sortSectionsForWiiU(this);
         }
 
@@ -311,7 +311,7 @@ export class RPL extends Header {
             if (crcsOffset !== 0) file.set(crcs, crcsOffset);
             else throw new Error('Cannot save RPL, no RPL CRCs section found.');
         }
-        
+
         let extension = '';
         if (options.automaticFileExtension) {
             switch (+this.type) {
@@ -357,7 +357,7 @@ export class RPL extends Header {
         return this.#sections[+this._shstrIndex] as StringSection;
     }
     /** Returns the RPL CRCs section, or `null` if the ELF type is not `RPL`.
-     * 
+     *
      * If the section cannot be found and the ELF type **is** `RPL`, an error is thrown. */
     get crcSection(): RPLCrcSection | null {
         if (+this.type !== Type.RPL) return null;
@@ -370,7 +370,7 @@ export class RPL extends Header {
         throw new Error(`ELF type is RPL but RPLCrcs section is missing! Expected at penultimate index (${expectedIdx}).`);
     }
     /** Returns the RPL File Info section, or `null` if the ELF type is not `RPL`.
-     * 
+     *
      * If the section cannot be found and the ELF type **is** `RPL`, an error is thrown. */
     get fileinfoSection(): RPLFileInfoSection | null {
         if (+this.type !== Type.RPL) return null;
@@ -430,12 +430,12 @@ export class RPL extends Header {
     /**
      * RPXLib attempts to be as safe as possible and prevent removing sections that are required or referenced by other sections,
      * but it's not perfect and it may be possible to remove a section that is referenced by another section through means that RPXLib doesn't check for.
-     * 
+     *
      * Usage of this method takes responsibility for any issues that may arise from removing a section that is referenced by another section.
      * RPXLib will no longer be able to guarantee the validity of the file after this method is used.
-     * 
+     *
      * **Important**: If this method throws an error, any changes made to the ELF for section removal are reverted.
-     * 
+     *
      * @param section The section to remove.
      * @param stubMode If `true`, the section will simply be replaced with a stub null section instead of removing it.
      * This is useful for avoiding shifting section indices.

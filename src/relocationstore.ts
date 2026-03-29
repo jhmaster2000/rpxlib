@@ -29,9 +29,9 @@ export class RelocationStore {
     readonly #data: DataWrapper;
     /** The current highest free relocation index, used to track new indexes for added relocations */
     #nextFreeIndex: number;
-    
+
     [RELOC_PARSE_FAILED_SYMBOL]?: true;
-    
+
     constructor(parentSection: RelocationSection, data?: DataWrapper | null) {
         this.rela = +parentSection.type === SectionType.Rela;
         this.entSize = this.rela ? 12 : 8;
@@ -149,13 +149,13 @@ export class RelocationStore {
     get(addr: number | uint32): Readonly<Relocation> | undefined {
         return this.#map.get(+addr);
     }
-    
+
     /** @experimental */
     add(rel: Relocation) {
         if (this.hasAt(rel.addr)) throw new Error(`[RelocationStore] add(): Relocation at 0x${rel.addr.toString(16)} already exists. Did you mean to use set()?`);
         if (this.rela && rel.addend === undefined) throw new Error(`[RelocationStore] add(): Attempt to add non-RELA relocation to RELA store.`);
         if (!this.rela && rel.addend !== undefined) throw new Error(`[RelocationStore] add(): Attempt to add RELA relocation to non-RELA store.`);
-        
+
         const withIndex = rel as RelocWithIndex;
         withIndex.index = this.#nextFreeIndex;
         this.#nextFreeIndex++;
@@ -164,7 +164,7 @@ export class RelocationStore {
         this.#map.set(addr, withIndex);
         this.#added.add(addr);
     }
-    
+
     /** @experimental */
     set(rel: Relocation) {
         const addr = +rel.addr;
@@ -173,7 +173,7 @@ export class RelocationStore {
         if (oldRel === rel) throw new Error(`[RelocationStore] set(): Attempt to set relocation to itself, this is a sign of incorrect usage. You must create a new Relocation object to set over the old one.`);
         if (this.rela && rel.addend === undefined) throw new Error(`[RelocationStore] set(): Attempt to set non-RELA relocation to RELA store.`);
         if (!this.rela && rel.addend !== undefined) throw new Error(`[RelocationStore] set(): Attempt to set RELA relocation to non-RELA store.`);
-        
+
         const newRelWithIndex = rel as RelocWithIndex;
         newRelWithIndex.index = oldRel.index;
         this.#map.set(addr, newRelWithIndex);
@@ -189,7 +189,7 @@ export class RelocationStore {
      * This means while you cannot restore a deleted relocation at its original index in the file,
      * you can still {@link add} a *new* relocation at the same address as a deleted one, only it will
      * be placed at the end of the original relocations array.
-     * 
+     *
      * The `delete` + `add` method is also required to change the address of a relocation, as
      * {@link set} provides no mechanism to modify the address of existing relocations.
      */
@@ -208,7 +208,7 @@ export class RelocationStore {
         // Only original (non-added) relocations need to be tracked for deletion/modification.
         if (!wasAddedRel) {
             // this just gracefully no-op's if its not a modified reloc.
-            this.#modified.delete(rel.index); 
+            this.#modified.delete(rel.index);
             // this is duplicate-proof by it being impossible for a reloc with a deleted reloc's index to be added back to the map after the original is deleted
             this.#deleted.push(rel.index);
         }

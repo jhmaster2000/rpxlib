@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
     ABI, Class, Endian, ISA, Type, Version,
-    SymbolBinding, SymbolType, SymbolVisibility, 
+    SymbolBinding, SymbolType, SymbolVisibility,
     ProgramFlags, ProgramType,
     SectionFlags, SectionType,
 } from './enums.js';
@@ -55,7 +55,7 @@ const stringifyType = (v: Type) => {
 };
 const stringifyISA = (v: ISA) => {
     const isaStrings = {
-        [ISA.None          ]: 'None',          
+        [ISA.None          ]: 'None',
         [ISA.M32           ]: 'AT&T WE 32100',
         [ISA.SPARC         ]: 'SPARC',
         [ISA.Intel386      ]: 'Intel 80386',
@@ -127,7 +127,7 @@ const stringifyISA = (v: ISA) => {
         [ISA.MN10300       ]: 'Matsushita MN10300',
         [ISA.MN10200       ]: 'Matsushita MN10200',
         [ISA.PJ            ]: 'picoJava',
-        [ISA.OPENRISC      ]: 'OpenRISC 32-bit embedded processor', 
+        [ISA.OPENRISC      ]: 'OpenRISC 32-bit embedded processor',
         [ISA.ARC_A5        ]: 'ARC Cores Tangent-A5',
         [ISA.XTENSA        ]: 'Tensilica Xtensa Architecture',
         [ISA.VIDEOCORE     ]: 'Alphamosaic VideoCore processor',
@@ -265,10 +265,10 @@ interface SpecialSectionsOptions {
 interface DebugOptions {
     /**
      * If `false` or unset, logs the parsed in-memory file data, reflecting any changes made to it by RPXLib.
-     * 
+     *
      * If `true`, logs the original input data used for certain fields which RPXLib dynamically re-calculates on load,
      * even if you haven't made any changes to the loaded file yourself.
-     * 
+     *
      * This is recommended for `objdump`-style inspection of ELF/RPL files. */
     useOriginalData?: boolean;
     logHeader?: boolean;
@@ -333,7 +333,7 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
         for (let i = 0; i < rpx.sections.length; i++) {
             const section = rpx.sections[i]!;
             if (options.sectionFilter && !options.sectionFilter(section)) continue;
-            
+
             let str = '    ';
             str += i.toString().padEnd(2) + '  ';
             str += section.name.padEnd(24) + '  ';
@@ -359,7 +359,7 @@ export function debug(rpx: RPL, options: DebugOptions = {}): void {
         console.log('\n[Special Sections]');
         for (let i = 0; i < rpx.sections.length; i++) {
             if (options.sectionFilter && !options.sectionFilter(rpx.sections[i]!)) continue;
-            
+
             switch (+rpx.sections[i]!.type) {
                 case SectionType.StrTab: {
                     if (typeof specialSections !== 'boolean' && !specialSections.strings) break;

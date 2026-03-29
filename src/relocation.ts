@@ -34,7 +34,7 @@ export class Relocation extends Structs.Relocation {
         }
     }
     readonly [DISALLOW_STRUCTURAL_MATCH]!: typeof DISALLOW_STRUCTURAL_MATCH;
-    
+
     get symbolIndex(): number { return <number>this.info >>> 8; }
     get type(): uint8 { return <number>this.info & 0xFF; }
 
