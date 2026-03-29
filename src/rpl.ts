@@ -206,12 +206,16 @@ export class RPL extends Header {
             currOffset = alignedNextOffset;
         };
 
-        // NOTE: This only re-orders the sections data offsets in the file layout.
+        // NOTE: This only defines the order of the sections data offsets in the file layout.
         // The sections headers are still written in their original order from the `RPL.#sections` array.
-        const wiiuSortedSections = sortSectionsForWiiU(this);
+        let dataWriteOrderedSections: Section[] = this.#sections;
 
-        for (let n = 0; n < wiiuSortedSections.length; n++) {
-            const section = wiiuSortedSections[n]!;
+        if (+this.type === Type.RPL) { 
+            dataWriteOrderedSections = sortSectionsForWiiU(this);
+        }
+
+        for (let n = 0; n < dataWriteOrderedSections.length; n++) {
+            const section = dataWriteOrderedSections[n]!;
             const sectionIndex = section.index; // by section header order (see NOTE above)
             const sectionOffset: number = section.hasData ? currOffset : 0;
             let sectionSize: number | uint32;
